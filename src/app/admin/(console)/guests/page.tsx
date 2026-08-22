@@ -26,6 +26,7 @@ type GuestsPageProps = {
     imported?: string;
     import?: string;
     error?: string;
+    detail?: string;
   }>;
 };
 
@@ -100,9 +101,8 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
       ) : null}
       {params.error === "create" ? (
         <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          Could not save the guest. Use the Supabase secret key for
-          SUPABASE_SERVICE_ROLE_KEY (not the publishable/anon key), then
-          restart or redeploy.
+          Could not save the guest
+          {params.detail ? `: ${params.detail}` : ". Try again, or check the Supabase secret key and that the guest SQL migrations were run."}
         </p>
       ) : null}
 
@@ -198,7 +198,10 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
               </tr>
             </thead>
             <tbody>
-              {guests.map((guest) => (
+              {guests.map((guest) => {
+                const inviteUrl = inviteById[guest.id];
+                const whatsappUrl = getWhatsAppInviteUrl(guest, inviteUrl);
+                return (
                 <tr
                   key={guest.id}
                   className="border-b border-zinc-100 last:border-0"
@@ -240,19 +243,22 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-2">
-                      <CopyText value={inviteById[guest.id]} label="Copy link" />
-                      <a
-                        href={getWhatsAppInviteUrl(guest, inviteById[guest.id])}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50"
-                      >
-                        WhatsApp
-                      </a>
+                      <CopyText value={inviteUrl} label="Copy link" />
+                      {whatsappUrl ? (
+                        <a
+                          href={whatsappUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50"
+                        >
+                          WhatsApp
+                        </a>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         )}

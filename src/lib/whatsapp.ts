@@ -31,7 +31,10 @@ export function whatsappInviteMessage(guest: Guest, inviteUrl: string) {
 }
 
 export function getWhatsAppInviteUrl(guest: Guest, inviteUrl: string) {
-  const text = encodeURIComponent(whatsappInviteMessage(guest, inviteUrl));
   const phone = toWhatsAppPhone(guest.phone);
-  return phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
+  if (!phone) {
+    return null;
+  }
+  const text = encodeURIComponent(whatsappInviteMessage(guest, inviteUrl));
+  return `https://wa.me/${phone}?text=${text}`;
 }

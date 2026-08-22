@@ -50,31 +50,53 @@ export async function createGuest(formData: FormData) {
     return;
   }
 
-  const [doorCode] = await allocateDoorCodes(1);
+  try {
+    const [doorCode] = await allocateDoorCodes(1);
 
-  const { data, error } = await createServiceClient()
-    .from("guests")
-    .insert({
-      name,
-      invite_name: inviteName,
-      token: createGuestToken(),
-      door_code: doorCode,
-      guest_type: guestType,
-      invited_to: invitedTo,
-      invited_count: invitedCount,
-      phone,
-      notes,
-    })
-    .select("id")
-    .single();
+    const { data, error } = await createServiceClient()
+      .from("guests")
+      .insert({
+        name,
+        invite_name: inviteName,
+        token: createGuestToken(),
+        door_code: doorCode,
+        guest_type: guestType,
+        invited_to: invitedTo,
+        invited_count: invitedCount,
+        phone,
+        notes,
+      })
+      .select("id")
+      .single();
 
-  if (error || !data) {
-    redirect("/admin/guests?error=create");
+    if (error || !data) {
+      redirect(createGuestError(error?.message ?? "Database rejected the save."));
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/guests");
+    redirect(`/admin/guests/${data.id}`);
+  } catch (error) {
+    if (isNextRedirect(error)) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : "Unexpected error.";
+    redirect(createGuestError(message));
   }
+}
 
-  revalidatePath("/admin");
-  revalidatePath("/admin/guests");
-  redirect(`/admin/guests/${data.id}`);
+function createGuestError(message: string) {
+  const detail = encodeURIComponent(message.slice(0, 180));
+  return `/admin/guests?error=create&detail=${detail}`;
+}
+
+function isNextRedirect(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    String((error as { digest?: string }).digest).startsWith("NEXT_REDIRECT")
+  );
 }
 
 export async function updateGuest(formData: FormData) {

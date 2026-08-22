@@ -200,7 +200,23 @@ export default async function GuestDetailPage({
                 label="Copy code"
               />
               <CopyText value={inviteUrl} label="Copy link" />
-              <CopyText value={whatsappUrl} label="Copy WhatsApp" />
+              {whatsappUrl ? (
+                <>
+                  <CopyText value={whatsappUrl} label="Copy WhatsApp" />
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50"
+                  >
+                    WhatsApp guest
+                  </a>
+                </>
+              ) : (
+                <span className="px-1 py-1.5 text-sm text-zinc-400">
+                  Add a phone to send WhatsApp
+                </span>
+              )}
               <a
                 href={inviteUrl}
                 target="_blank"
@@ -208,14 +224,6 @@ export default async function GuestDetailPage({
                 className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50"
               >
                 Open invite
-              </a>
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50"
-              >
-                {guest.phone ? "WhatsApp guest" : "WhatsApp"}
               </a>
             </div>
             <div className="mt-4">
