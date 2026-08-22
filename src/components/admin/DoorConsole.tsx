@@ -56,12 +56,19 @@ export function DoorConsole({ guests, gate }: DoorConsoleProps) {
   const visible = tab === "waiting" ? waiting : arrived;
 
   async function showGuest(query: string, method: "qr" | "manual") {
-    const result = await lookupDoorGuest(query);
-    if (!result.ok) {
-      setLookup({ status: "missing", message: result.error });
-      return;
+    try {
+      const result = await lookupDoorGuest(query);
+      if (!result.ok) {
+        setLookup({ status: "missing", message: result.error });
+        return;
+      }
+      openGuest(result.guest, method);
+    } catch {
+      setLookup({
+        status: "missing",
+        message: "Could not look up that guest. Try the door code.",
+      });
     }
-    openGuest(result.guest, method);
   }
 
   function openGuest(guest: Guest, method: "qr" | "manual") {
@@ -114,7 +121,7 @@ export function DoorConsole({ guests, gate }: DoorConsoleProps) {
         <CountCard label="Heads in" value={heads} />
       </div>
 
-      <DoorScanner onScan={(text) => showGuest(text, "qr")} />
+      <DoorScanner onScan={(text) => void showGuest(text, "qr")} />
 
       <form
         className="flex gap-2"

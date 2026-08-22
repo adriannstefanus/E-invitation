@@ -1,105 +1,157 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 type CameraOption = { id: string; label: string };
 
 type DoorScannerProps = {
   onScan: (text: string) => void;
+  enabled?: boolean;
 };
 
-export function DoorScanner({ onScan }: DoorScannerProps) {
+type ScannerHandle = {
+  stop: () => Promise<void>;
+  clear: () => void;
+  applyVideoConstraints?: (value: object) => Promise<void>;
+};
+
+function pickRearCamera(devices: CameraOption[]) {
+  const rear = devices.find((device) =>
+    /back|rear|environment|belakang/i.test(device.label),
+  );
+  return rear?.id ?? devices.at(-1)?.id ?? devices[0]?.id ?? "";
+}
+
+export function DoorScanner({ onScan, enabled = true }: DoorScannerProps) {
+  const regionId = `door-scanner-${useId().replace(/:/g, "")}`;
   const holderRef = useRef<HTMLDivElement>(null);
-  const scannerRef = useRef<{
-    stop: () => Promise<void>;
-    clear: () => void;
-    applyVideoConstraints?: (value: object) => Promise<void>;
-  } | null>(null);
+  const scannerRef = useRef<ScannerHandle | null>(null);
   const onScanRef = useRef(onScan);
   const busyRef = useRef(false);
+  const startingRef = useRef(false);
   const [cameras, setCameras] = useState<CameraOption[]>([]);
-  const [cameraId, setCameraId] = useState<string>("");
+  const [cameraId, setCameraId] = useState("");
+  const [running, setRunning] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
-  const [message, setMessage] = useState("Point the camera at the guest QR.");
+  const [message, setMessage] = useState(
+    "Tap Start camera, then point it at the guest QR.",
+  );
 
   onScanRef.current = onScan;
 
   useEffect(() => {
-    let cancelled = false;
-    import("html5-qrcode")
-      .then(({ Html5Qrcode }) => Html5Qrcode.getCameras())
-      .then((devices) => {
-        if (cancelled || devices.length === 0) {
-          return;
-        }
-        setCameras(
-          devices.map((device, index) => ({
-            id: device.id,
-            label: device.label || `Camera ${index + 1}`,
-          })),
-        );
-        setCameraId((current) => current || devices[0].id);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setMessage("Camera list unavailable. Trying the rear camera.");
-        }
-      });
+    if (!enabled && running) {
+      void stopCamera();
+    }
+  }, [enabled, running]);
+
+  useEffect(() => {
     return () => {
-      cancelled = true;
+      void stopCamera();
     };
   }, []);
 
-  useEffect(() => {
-    let stopped = false;
-    let scanner: {
-      stop: () => Promise<void>;
-      clear: () => void;
-      applyVideoConstraints?: (value: object) => Promise<void>;
-    } | null = null;
+  async function stopCamera() {
+    const scanner = scannerRef.current;
+    scannerRef.current = null;
+    setRunning(false);
+    setTorchOn(false);
+    if (!scanner) {
+      return;
+    }
+    try {
+      await scanner.stop();
+    } catch {
+      // Some phones throw if the stream already died.
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 250));
+    try {
+      scanner.clear();
+    } catch {
+      // Ignore leftover DOM from html5-qrcode.
+    }
+  }
 
-    async function start() {
+  async function startCamera(deviceId?: string) {
+    if (startingRef.current || !holderRef.current) {
+      return;
+    }
+    startingRef.current = true;
+    setMessage("Starting camera…");
+    await stopCamera();
+
+    try {
       const { Html5Qrcode } = await import("html5-qrcode");
-      if (!holderRef.current || stopped) {
-        return;
-      }
-      const id = "door-scanner";
-      holderRef.current.id = id;
-      const instance = new Html5Qrcode(id);
-      scanner = instance;
+      holderRef.current.id = regionId;
+      holderRef.current.replaceChildren();
+      const instance = new Html5Qrcode(regionId, { verbose: false });
       scannerRef.current = instance;
+
+      const cameraConfig = deviceId
+        ? { deviceId: { ideal: deviceId } }
+        : { facingMode: "environment" };
+
       await instance.start(
-        cameraId ? { deviceId: { exact: cameraId } } : { facingMode: "environment" },
-        { fps: 8, qrbox: 240 },
+        cameraConfig,
+        {
+          fps: 5,
+          qrbox: (viewfinderWidth, viewfinderHeight) => {
+            const size = Math.max(
+              160,
+              Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.65),
+            );
+            return { width: size, height: size };
+          },
+          aspectRatio: 1,
+        },
         (text) => {
           if (busyRef.current) {
             return;
           }
           busyRef.current = true;
-          onScanRef.current(text);
+          try {
+            onScanRef.current(text);
+          } catch {
+            setMessage("Could not read that QR. Try the door code.");
+          }
           window.setTimeout(() => {
             busyRef.current = false;
-          }, 1600);
+          }, 1800);
         },
         () => undefined,
       );
-    }
 
-    start().catch(() => {
-      if (!stopped) {
-        setMessage("Camera could not start. Use the door code or name search.");
+      setRunning(true);
+      setCameraId(deviceId ?? "");
+      setMessage("Point the camera at the guest QR.");
+
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        const options = devices.map((device, index) => ({
+          id: device.id,
+          label: device.label || `Camera ${index + 1}`,
+        }));
+        setCameras(options);
+        if (!deviceId) {
+          setCameraId(pickRearCamera(options));
+        }
+      } catch {
+        // Switching cameras is optional.
       }
-    });
+    } catch {
+      await stopCamera();
+      setMessage(
+        "This phone could not keep the camera open. Use the 6-digit door code or name search.",
+      );
+    } finally {
+      startingRef.current = false;
+    }
+  }
 
-    return () => {
-      stopped = true;
-      scannerRef.current = null;
-      scanner
-        ?.stop()
-        .then(() => scanner?.clear())
-        .catch(() => undefined);
-    };
-  }, [cameraId]);
+  async function switchCamera(nextId: string) {
+    setCameraId(nextId);
+    await startCamera(nextId);
+  }
 
   async function toggleTorch() {
     const next = !torchOn;
@@ -109,20 +161,7 @@ export function DoorScanner({ onScan }: DoorScannerProps) {
       });
       setTorchOn(next);
     } catch {
-      const video = holderRef.current?.querySelector("video");
-      const track = (
-        video?.srcObject instanceof MediaStream
-          ? video.srcObject.getVideoTracks()[0]
-          : null
-      );
-      try {
-        await track?.applyConstraints({
-          advanced: [{ torch: next }],
-        } as unknown as MediaTrackConstraints);
-        setTorchOn(next);
-      } catch {
-        setMessage("Torch is not available on this camera.");
-      }
+      setMessage("Torch is not available on this camera.");
     }
   }
 
@@ -134,13 +173,27 @@ export function DoorScanner({ onScan }: DoorScannerProps) {
       />
       <p className="mt-3 text-center text-base text-zinc-600">{message}</p>
       <div className="mt-3 flex flex-wrap justify-center gap-2">
-        {cameras.length > 1 ? (
+        {running ? (
+          <button
+            type="button"
+            onClick={() => void stopCamera()}
+            className="min-h-12 rounded-xl border border-zinc-300 px-4 text-base"
+          >
+            Stop camera
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => void startCamera()}
+            className="min-h-12 rounded-xl bg-zinc-900 px-4 text-base text-white"
+          >
+            Start camera
+          </button>
+        )}
+        {running && cameras.length > 1 ? (
           <select
             value={cameraId}
-            onChange={(event) => {
-              setTorchOn(false);
-              setCameraId(event.target.value);
-            }}
+            onChange={(event) => void switchCamera(event.target.value)}
             className="min-h-12 rounded-xl border border-zinc-300 px-3 text-base"
           >
             {cameras.map((camera) => (
@@ -150,13 +203,15 @@ export function DoorScanner({ onScan }: DoorScannerProps) {
             ))}
           </select>
         ) : null}
-        <button
-          type="button"
-          onClick={toggleTorch}
-          className="min-h-12 rounded-xl border border-zinc-300 px-4 text-base"
-        >
-          {torchOn ? "Torch off" : "Torch"}
-        </button>
+        {running ? (
+          <button
+            type="button"
+            onClick={() => void toggleTorch()}
+            className="min-h-12 rounded-xl border border-zinc-300 px-4 text-base"
+          >
+            {torchOn ? "Torch off" : "Torch"}
+          </button>
+        ) : null}
       </div>
     </div>
   );
