@@ -1,19 +1,20 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { QRCode } from "jsqr";
 
 type CameraOption = { id: string; label: string };
 
 type DoorScannerProps = {
   onScan: (text: string) => void;
-  enabled?: boolean;
 };
 
-type ScannerHandle = {
-  stop: () => Promise<void>;
-  clear: () => void;
-  applyVideoConstraints?: (value: object) => Promise<void>;
-};
+type JsQr = (
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+  options?: { inversionAttempts?: "dontInvert" | "attemptBoth" },
+) => QRCode | null;
 
 function pickRearCamera(devices: CameraOption[]) {
   const rear = devices.find((device) =>
@@ -22,17 +23,26 @@ function pickRearCamera(devices: CameraOption[]) {
   return rear?.id ?? devices.at(-1)?.id ?? devices[0]?.id ?? "";
 }
 
-export function DoorScanner({ onScan, enabled = true }: DoorScannerProps) {
-  const regionId = `door-scanner-${useId().replace(/:/g, "")}`;
-  const holderRef = useRef<HTMLDivElement>(null);
-  const scannerRef = useRef<ScannerHandle | null>(null);
+function stopStream(stream: MediaStream | null) {
+  stream?.getTracks().forEach((track) => track.stop());
+}
+
+export function DoorScanner({ onScan }: DoorScannerProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const timerRef = useRef<number>(0);
+  const foundTimerRef = useRef<number>(0);
   const onScanRef = useRef(onScan);
   const busyRef = useRef(false);
   const startingRef = useRef(false);
+  const decodeRef = useRef<JsQr | null>(null);
+
   const [cameras, setCameras] = useState<CameraOption[]>([]);
   const [cameraId, setCameraId] = useState("");
   const [running, setRunning] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
+  const [found, setFound] = useState(false);
   const [message, setMessage] = useState(
     "Tap Start camera, then point it at the guest QR.",
   );
@@ -40,106 +50,78 @@ export function DoorScanner({ onScan, enabled = true }: DoorScannerProps) {
   onScanRef.current = onScan;
 
   useEffect(() => {
-    if (!enabled && running) {
-      void stopCamera();
-    }
-  }, [enabled, running]);
-
-  useEffect(() => {
     return () => {
-      void stopCamera();
+      window.clearInterval(timerRef.current);
+      window.clearTimeout(foundTimerRef.current);
+      stopStream(streamRef.current);
     };
   }, []);
 
-  async function stopCamera() {
-    const scanner = scannerRef.current;
-    scannerRef.current = null;
+  function stopCamera() {
+    window.clearInterval(timerRef.current);
+    timerRef.current = 0;
+    stopStream(streamRef.current);
+    streamRef.current = null;
+    const video = videoRef.current;
+    if (video) {
+      video.srcObject = null;
+    }
     setRunning(false);
     setTorchOn(false);
-    if (!scanner) {
-      return;
-    }
-    try {
-      await scanner.stop();
-    } catch {
-      // Some phones throw if the stream already died.
-    }
-    await new Promise((resolve) => window.setTimeout(resolve, 250));
-    try {
-      scanner.clear();
-    } catch {
-      // Ignore leftover DOM from html5-qrcode.
-    }
+    setFound(false);
   }
 
   async function startCamera(deviceId?: string) {
-    if (startingRef.current || !holderRef.current) {
+    if (startingRef.current) {
       return;
     }
     startingRef.current = true;
     setMessage("Starting camera…");
-    await stopCamera();
+    stopCamera();
 
     try {
-      const { Html5Qrcode } = await import("html5-qrcode");
-      holderRef.current.id = regionId;
-      holderRef.current.replaceChildren();
-      const instance = new Html5Qrcode(regionId, { verbose: false });
-      scannerRef.current = instance;
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: deviceId
+          ? { deviceId: { ideal: deviceId }, width: { ideal: 640, max: 1280 } }
+          : {
+              facingMode: { ideal: "environment" },
+              width: { ideal: 640, max: 1280 },
+              height: { ideal: 480, max: 720 },
+            },
+      });
+      streamRef.current = stream;
 
-      const cameraConfig = deviceId
-        ? { deviceId: { ideal: deviceId } }
-        : { facingMode: "environment" };
+      const video = videoRef.current;
+      if (!video) {
+        stopStream(stream);
+        return;
+      }
+      video.srcObject = stream;
+      video.setAttribute("playsinline", "true");
+      video.muted = true;
+      await video.play();
 
-      await instance.start(
-        cameraConfig,
-        {
-          fps: 5,
-          qrbox: (viewfinderWidth, viewfinderHeight) => {
-            const size = Math.max(
-              160,
-              Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.65),
-            );
-            return { width: size, height: size };
-          },
-          aspectRatio: 1,
-        },
-        (text) => {
-          if (busyRef.current) {
-            return;
-          }
-          busyRef.current = true;
-          try {
-            onScanRef.current(text);
-          } catch {
-            setMessage("Could not read that QR. Try the door code.");
-          }
-          window.setTimeout(() => {
-            busyRef.current = false;
-          }, 1800);
-        },
-        () => undefined,
-      );
+      if (!decodeRef.current) {
+        const module = await import("jsqr");
+        decodeRef.current = module.default;
+      }
 
+      timerRef.current = window.setInterval(readFrame, 280);
       setRunning(true);
-      setCameraId(deviceId ?? "");
       setMessage("Point the camera at the guest QR.");
 
-      try {
-        const devices = await Html5Qrcode.getCameras();
-        const options = devices.map((device, index) => ({
-          id: device.id,
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const options = devices
+        .filter((device) => device.kind === "videoinput")
+        .map((device, index) => ({
+          id: device.deviceId,
           label: device.label || `Camera ${index + 1}`,
         }));
-        setCameras(options);
-        if (!deviceId) {
-          setCameraId(pickRearCamera(options));
-        }
-      } catch {
-        // Switching cameras is optional.
-      }
+      setCameras(options);
+      setCameraId(deviceId || pickRearCamera(options));
     } catch {
-      await stopCamera();
+      stopCamera();
       setMessage(
         "This phone could not keep the camera open. Use the 6-digit door code or name search.",
       );
@@ -148,17 +130,60 @@ export function DoorScanner({ onScan, enabled = true }: DoorScannerProps) {
     }
   }
 
-  async function switchCamera(nextId: string) {
-    setCameraId(nextId);
-    await startCamera(nextId);
+  function readFrame() {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const decode = decodeRef.current;
+    if (!video || !canvas || !decode || video.readyState < 2) {
+      return;
+    }
+
+    const size = 256;
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) {
+      return;
+    }
+
+    try {
+      context.drawImage(video, 0, 0, size, size);
+      const image = context.getImageData(0, 0, size, size);
+      const code = decode(image.data, size, size, {
+        inversionAttempts: "dontInvert",
+      });
+      if (!code?.data || busyRef.current) {
+        return;
+      }
+      busyRef.current = true;
+      setFound(true);
+      setMessage("QR found");
+      window.clearTimeout(foundTimerRef.current);
+      foundTimerRef.current = window.setTimeout(() => {
+        setFound(false);
+        if (streamRef.current) {
+          setMessage("Point the camera at the guest QR.");
+        }
+      }, 1600);
+      onScanRef.current(code.data);
+      window.setTimeout(() => {
+        busyRef.current = false;
+      }, 1800);
+    } catch {
+      // Skip a bad frame instead of crashing the tab.
+    }
   }
 
   async function toggleTorch() {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) {
+      return;
+    }
     const next = !torchOn;
     try {
-      await scannerRef.current?.applyVideoConstraints?.({
+      await track.applyConstraints({
         advanced: [{ torch: next }],
-      });
+      } as unknown as MediaTrackConstraints);
       setTorchOn(next);
     } catch {
       setMessage("Torch is not available on this camera.");
@@ -168,15 +193,41 @@ export function DoorScanner({ onScan, enabled = true }: DoorScannerProps) {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-4">
       <div
-        ref={holderRef}
-        className="mx-auto aspect-square max-w-sm overflow-hidden rounded-xl bg-zinc-900"
-      />
-      <p className="mt-3 text-center text-base text-zinc-600">{message}</p>
+        className={`relative mx-auto aspect-square max-w-sm overflow-hidden rounded-xl bg-zinc-900 ring-4 transition ${
+          found ? "ring-emerald-400" : "ring-transparent"
+        }`}
+      >
+        <video
+          ref={videoRef}
+          className="h-full w-full object-cover"
+          autoPlay
+          muted
+          playsInline
+        />
+        <canvas ref={canvasRef} className="hidden" />
+        <div
+          className={`pointer-events-none absolute inset-8 rounded-lg border-4 ${
+            found ? "border-emerald-400 bg-emerald-400/25" : "border-white/70"
+          }`}
+        />
+        {found ? (
+          <p className="pointer-events-none absolute inset-x-0 bottom-4 text-center text-lg font-medium text-emerald-100">
+            Got it
+          </p>
+        ) : null}
+      </div>
+      <p
+        className={`mt-3 text-center text-base ${
+          found ? "font-medium text-emerald-700" : "text-zinc-600"
+        }`}
+      >
+        {message}
+      </p>
       <div className="mt-3 flex flex-wrap justify-center gap-2">
         {running ? (
           <button
             type="button"
-            onClick={() => void stopCamera()}
+            onClick={stopCamera}
             className="min-h-12 rounded-xl border border-zinc-300 px-4 text-base"
           >
             Stop camera
@@ -193,7 +244,7 @@ export function DoorScanner({ onScan, enabled = true }: DoorScannerProps) {
         {running && cameras.length > 1 ? (
           <select
             value={cameraId}
-            onChange={(event) => void switchCamera(event.target.value)}
+            onChange={(event) => void startCamera(event.target.value)}
             className="min-h-12 rounded-xl border border-zinc-300 px-3 text-base"
           >
             {cameras.map((camera) => (
