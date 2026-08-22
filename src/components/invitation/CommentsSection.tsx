@@ -3,6 +3,8 @@
 import { FormEvent, useState } from "react";
 import { submitComment } from "@/app/invite/actions";
 import { InvitationSection } from "@/components/invitation/InvitationSection";
+import { useInviteBusy } from "@/components/invitation/InviteBusy";
+import { useToast } from "@/components/ui/Toast";
 import { invitationMedia } from "@/data/media";
 
 type GuestComment = {
@@ -28,6 +30,8 @@ export function CommentsSection({
   const [items, setItems] = useState(comments);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const toast = useToast();
+  const setBusy = useInviteBusy();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,20 +43,28 @@ export function CommentsSection({
 
     setError(null);
     setPending(true);
-    const formData = new FormData(event.currentTarget);
-    const result = await submitComment(formData);
-    setPending(false);
+    setBusy(true);
+    try {
+      const formData = new FormData(event.currentTarget);
+      const result = await submitComment(formData);
 
-    if (!result.ok) {
-      setError(result.error ?? "Could not send wish.");
-      return;
+      if (!result.ok) {
+        const nextError = result.error ?? "Could not send wish.";
+        setError(nextError);
+        toast({ tone: "error", message: nextError });
+        return;
+      }
+
+      setItems((current) => [
+        { id: crypto.randomUUID(), name: nextName, message: nextMessage },
+        ...current,
+      ]);
+      setMessage("");
+      toast("Wish sent.");
+    } finally {
+      setPending(false);
+      setBusy(false);
     }
-
-    setItems((current) => [
-      { id: crypto.randomUUID(), name: nextName, message: nextMessage },
-      ...current,
-    ]);
-    setMessage("");
   }
 
   return (
@@ -92,7 +104,7 @@ export function CommentsSection({
           disabled={pending}
           className="min-h-11 w-full rounded-full bg-accent text-sm tracking-wide text-white disabled:opacity-60"
         >
-          Send
+          {pending ? "Sending…" : "Send"}
         </button>
       </form>
       {error ? <p className="mt-2 text-sm text-accent">{error}</p> : null}

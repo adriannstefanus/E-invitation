@@ -12,6 +12,7 @@ import { FaqSection } from "@/components/invitation/FaqSection";
 import { GallerySection } from "@/components/invitation/GallerySection";
 import { GiftSection } from "@/components/invitation/GiftSection";
 import { InstagramSection } from "@/components/invitation/InstagramSection";
+import { InviteBusyProvider } from "@/components/invitation/InviteBusy";
 import { LiveStreamSection } from "@/components/invitation/LiveStreamSection";
 import { LocationSection } from "@/components/invitation/LocationSection";
 import { LoveStorySection } from "@/components/invitation/LoveStorySection";
@@ -27,7 +28,6 @@ import { RundownSection } from "@/components/invitation/RundownSection";
 import { StaySection } from "@/components/invitation/StaySection";
 import { VerseSection } from "@/components/invitation/VerseSection";
 import { WeddingPartySection } from "@/components/invitation/WeddingPartySection";
-
 import type { GuestbookComment, InviteEvent, RsvpStatus } from "@/lib/types";
 
 type InvitationShellProps = {
@@ -56,58 +56,60 @@ export function InvitationShell({
   return (
     <div className="h-dvh bg-[#e8e0d4]">
       <div
-        className={`invitation-snap relative mx-auto h-dvh w-full max-w-[430px] bg-background shadow-[0_0_40px_rgba(63,58,52,0.12)] ${
+        className={`invitation-snap relative isolate mx-auto h-dvh w-full max-w-[430px] bg-background shadow-[0_0_40px_rgba(63,58,52,0.12)] ${
           opened ? "snap-y snap-mandatory overflow-y-auto" : "overflow-hidden"
         }`}
       >
-        <Cover
-          guestName={guestName}
-          opened={opened}
-          onOpen={() => setOpened(true)}
-        />
+        <InviteBusyProvider>
+          <Cover
+            guestName={guestName}
+            opened={opened}
+            onOpen={() => setOpened(true)}
+          />
 
-        {opened ? (
-          <>
-            <MusicToggle />
-            {inviteUrl ? (
-              <QrSection
+          {opened ? (
+            <>
+              <MusicToggle />
+              {inviteUrl ? (
+                <QrSection
+                  guestName={guestName}
+                  inviteUrl={inviteUrl}
+                  doorCode={doorCode}
+                />
+              ) : null}
+              <CoupleSection />
+              <VerseSection />
+              <ParentsSection />
+              <CountdownSection />
+              <BrideDetailSection />
+              <GroomDetailSection />
+              <LoveStorySection />
+              <WeddingPartySection />
+              <EventsSection invitedTo={invitedTo} />
+              <LocationSection invitedTo={invitedTo} />
+              <RundownSection />
+              <DressCodeSection />
+              <StaySection />
+              <LiveStreamSection />
+              <InstagramSection />
+              <RsvpSection
                 guestName={guestName}
-                inviteUrl={inviteUrl}
-                doorCode={doorCode}
+                guestToken={guestToken}
+                rsvpStatus={rsvpStatus}
+                rsvpCount={rsvpCount}
               />
-            ) : null}
-            <CoupleSection />
-            <VerseSection />
-            <ParentsSection />
-            <CountdownSection />
-            <BrideDetailSection />
-            <GroomDetailSection />
-            <LoveStorySection />
-            <WeddingPartySection />
-            <EventsSection invitedTo={invitedTo} />
-            <LocationSection invitedTo={invitedTo} />
-            <RundownSection />
-            <DressCodeSection />
-            <StaySection />
-            <LiveStreamSection />
-            <InstagramSection />
-            <RsvpSection
-              guestName={guestName}
-              guestToken={guestToken}
-              rsvpStatus={rsvpStatus}
-              rsvpCount={rsvpCount}
-            />
-            <GallerySection />
-            <GiftSection />
-            <FaqSection />
-            <CommentsSection
-              guestName={guestName}
-              guestToken={guestToken}
-              comments={comments}
-            />
-            <ClosingSection />
-          </>
-        ) : null}
+              <GallerySection />
+              <GiftSection />
+              <FaqSection />
+              <CommentsSection
+                guestName={guestName}
+                guestToken={guestToken}
+                comments={comments}
+              />
+              <ClosingSection />
+            </>
+          ) : null}
+        </InviteBusyProvider>
       </div>
     </div>
   );

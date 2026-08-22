@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useFormStatus } from "react-dom";
 
 export function CopyText({
   value,
@@ -35,23 +36,32 @@ export function CopyText({
 export function ConfirmSubmit({
   label,
   confirmLabel,
+  pendingLabel = "Working…",
   className,
 }: {
   label: string;
   confirmLabel: string;
+  pendingLabel?: string;
   className?: string;
 }) {
+  const { pending } = useFormStatus();
+
   return (
     <button
       type="submit"
-      className={className}
+      disabled={pending}
+      className={`disabled:opacity-60 ${className ?? ""}`}
       onClick={(event) => {
+        if (pending) {
+          event.preventDefault();
+          return;
+        }
         if (!window.confirm(confirmLabel)) {
           event.preventDefault();
         }
       }}
     >
-      {label}
+      {pending ? pendingLabel : label}
     </button>
   );
 }

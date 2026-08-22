@@ -2,6 +2,9 @@ import Link from "next/link";
 import { createGuest, importGuestsCsv } from "@/app/admin/actions";
 import { CopyText } from "@/components/admin/AdminControls";
 import { AdminShell, SetupNotice, TypeBadge } from "@/components/admin/AdminUi";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { FormPageBusy } from "@/components/ui/PageBusy";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { listGuests } from "@/lib/db";
 import { getSiteOrigin } from "@/lib/invite-url";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -84,28 +87,6 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
         {guests.length !== allGuests.length ? ` · ${guests.length} shown` : ""}
       </p>
 
-      {params.imported ? (
-        <p className="mb-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          Imported {params.imported} guest{params.imported === "1" ? "" : "s"}.
-        </p>
-      ) : null}
-      {params.import === "empty" ? (
-        <p className="mb-4 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          The CSV was empty.
-        </p>
-      ) : null}
-      {params.import === "error" ? (
-        <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          Could not import the CSV. Check the file and try again.
-        </p>
-      ) : null}
-      {params.error === "create" ? (
-        <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          Could not save the guest
-          {params.detail ? `: ${params.detail}` : ". Try again, or check the Supabase secret key and that the guest SQL migrations were run."}
-        </p>
-      ) : null}
-
       <form className="mb-4 flex flex-wrap gap-2" action="/admin/guests">
         <input
           name="q"
@@ -158,9 +139,12 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
           <option value="arrived">Arrived</option>
           <option value="waiting">Not yet</option>
         </select>
-        <button className="rounded-md bg-zinc-900 px-3 py-2 text-sm text-white">
+        <SubmitButton
+          pendingLabel="Filtering…"
+          className="rounded-md bg-zinc-900 px-3 py-2 text-sm text-white"
+        >
           Filter
-        </button>
+        </SubmitButton>
         <a
           href="/admin/guests"
           className="rounded-md px-3 py-2 text-sm text-zinc-500 hover:text-zinc-900"
@@ -178,12 +162,13 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
         </a>
       </div>
 
+      {guests.length === 0 ? (
+        <EmptyState
+          title="No guests match"
+          body="Add one below or import a CSV."
+        />
+      ) : (
       <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
-        {guests.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-zinc-500">
-            No guests match. Add one below or import a CSV.
-          </p>
-        ) : (
           <table className="w-full text-left text-sm">
             <thead className="border-b border-zinc-200 text-zinc-500">
               <tr>
@@ -261,8 +246,8 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
               })}
             </tbody>
           </table>
-        )}
       </div>
+      )}
 
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         <form
@@ -339,9 +324,12 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
                 className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2"
               />
             </label>
-            <button className="rounded-md bg-zinc-900 px-3 py-2 text-sm text-white">
+            <SubmitButton
+              pendingLabel="Saving…"
+              className="rounded-md bg-zinc-900 px-3 py-2 text-sm text-white"
+            >
               Save and show QR
-            </button>
+            </SubmitButton>
           </div>
         </form>
 
@@ -349,6 +337,7 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
           action={importGuestsCsv}
           className="rounded-xl border border-zinc-200 bg-white p-4"
         >
+          <FormPageBusy label="Importing guests…" />
           <h2 className="font-medium">CSV import</h2>
           <p className="mt-2 text-sm text-zinc-500">
             Columns: name, invite_name, type, invited_to, invited_count, phone.
@@ -362,9 +351,12 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
             required
             className="mt-3 block w-full text-sm"
           />
-          <button className="mt-3 rounded-md bg-zinc-900 px-3 py-2 text-sm text-white">
+          <SubmitButton
+            pendingLabel="Importing…"
+            className="mt-3 rounded-md bg-zinc-900 px-3 py-2 text-sm text-white"
+          >
             Import
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </AdminShell>

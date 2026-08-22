@@ -1,5 +1,8 @@
 import { createGift, deleteGift } from "@/app/admin/actions";
+import { ConfirmSubmit } from "@/components/admin/AdminControls";
 import { AdminShell, SetupNotice } from "@/components/admin/AdminUi";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { listGifts, listGuests } from "@/lib/db";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { GIFT_KINDS } from "@/lib/types";
@@ -59,18 +62,19 @@ export default async function GiftsAdminPage() {
             className="rounded-md border border-zinc-300 px-3 py-2 text-sm md:col-span-2"
           />
         </div>
-        <button className="mt-3 rounded-md bg-zinc-900 px-3 py-2 text-sm text-white">
+        <SubmitButton
+          pendingLabel="Saving…"
+          className="mt-3 rounded-md bg-zinc-900 px-3 py-2 text-sm text-white"
+        >
           Save gift
-        </button>
+        </SubmitButton>
       </form>
 
+      {gifts.length === 0 ? (
+        <EmptyState title="No gifts logged." />
+      ) : (
       <ul className="space-y-3">
-        {gifts.length === 0 ? (
-          <li className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500">
-            No gifts logged.
-          </li>
-        ) : (
-          gifts.map((gift) => (
+          {gifts.map((gift) => (
             <li
               key={gift.id}
               className="flex items-start justify-between gap-3 rounded-xl border border-zinc-200 bg-white p-4"
@@ -86,12 +90,17 @@ export default async function GiftsAdminPage() {
               </div>
               <form action={deleteGift}>
                 <input type="hidden" name="id" value={gift.id} />
-                <button className="text-sm text-red-600">Delete</button>
+                <ConfirmSubmit
+                  label="Delete"
+                  confirmLabel={`Delete this ${gift.kind} from ${gift.guest_name}?`}
+                  pendingLabel="Deleting…"
+                  className="text-sm text-red-600"
+                />
               </form>
             </li>
-          ))
-        )}
+          ))}
       </ul>
+      )}
     </AdminShell>
   );
 }

@@ -6,6 +6,7 @@ import { checkInGuest, lookupDoorGuest, undoCheckIn } from "@/app/admin/actions"
 import { ConfirmSubmit } from "@/components/admin/AdminControls";
 import { DoorScanner } from "@/components/admin/DoorScanner";
 import { TypeBadge } from "@/components/admin/AdminUi";
+import { useToast } from "@/components/ui/Toast";
 import { formatDoorCode } from "@/lib/door-code-format";
 import {
   INVITE_EVENT_LABELS,
@@ -27,6 +28,7 @@ type LookupState =
 
 export function DoorConsole({ guests, gate }: DoorConsoleProps) {
   const router = useRouter();
+  const toast = useToast();
   const [tab, setTab] = useState<"waiting" | "arrived">("waiting");
   const [lookup, setLookup] = useState<LookupState>({ status: "idle" });
   const [arrivedCount, setArrivedCount] = useState(1);
@@ -92,9 +94,14 @@ export function DoorConsole({ guests, gate }: DoorConsoleProps) {
     const result = await checkInGuest(formData);
     setPending(false);
     if (!result.ok) {
+      toast({ tone: "error", message: result.error });
       setLookup({ status: "missing", message: result.error });
       return;
     }
+    toast({
+      tone: "success",
+      message: `Checked in ${lookup.guest.name}.`,
+    });
     router.refresh();
     setLookup({ status: "idle" });
   }

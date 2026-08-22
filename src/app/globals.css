@@ -31,6 +31,92 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+@layer base {
+  :where(
+    a[href],
+    button,
+    [type="button"],
+    [type="submit"],
+    [type="reset"],
+    [type="file"],
+    [role="button"],
+    select,
+    summary,
+    label
+  ) {
+    cursor: pointer;
+  }
+
+  :where(
+    input:not(
+      [type="checkbox"],
+      [type="radio"],
+      [type="file"],
+      [type="submit"],
+      [type="button"],
+      [type="reset"],
+      [type="color"]
+    ),
+    textarea
+  ) {
+    cursor: text;
+  }
+
+  :where(
+    button,
+    [type="button"],
+    [type="submit"],
+    [type="reset"],
+    [type="file"],
+    select,
+    input,
+    textarea
+  ):disabled {
+    cursor: not-allowed;
+  }
+
+  :where(
+    a[href],
+    button,
+    [type="button"],
+    [type="submit"],
+    [type="reset"],
+    [role="button"],
+    select,
+    summary
+  ) {
+    transition:
+      color 140ms ease,
+      background-color 140ms ease,
+      background-image 140ms ease,
+      border-color 140ms ease,
+      opacity 140ms ease,
+      box-shadow 140ms ease;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :where(
+    button,
+    [type="button"],
+    [type="submit"],
+    [type="reset"],
+    [role="button"]
+  ):not(:disabled):hover {
+    background-image: linear-gradient(
+      color-mix(in srgb, currentColor 12%, transparent),
+      color-mix(in srgb, currentColor 12%, transparent)
+    );
+  }
+
+  :where(select):not(:disabled):hover {
+    background-image: linear-gradient(
+      color-mix(in srgb, currentColor 8%, transparent),
+      color-mix(in srgb, currentColor 8%, transparent)
+    );
+  }
+}
+
 ::selection {
   background: color-mix(in srgb, var(--accent) 25%, transparent);
 }

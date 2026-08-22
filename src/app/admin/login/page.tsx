@@ -1,4 +1,5 @@
 import { loginAdmin } from "@/app/admin/actions";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 
 type LoginPageProps = {
   searchParams: Promise<{ error?: string }>;
@@ -29,12 +30,12 @@ export default async function AdminLoginPage({ searchParams }: LoginPageProps) {
         {error ? (
           <p className="mt-3 text-sm text-red-600">Wrong password.</p>
         ) : null}
-        <button
-          type="submit"
+        <SubmitButton
+          pendingLabel="Checking…"
           className="mt-4 w-full rounded-md bg-zinc-900 py-2 text-sm text-white"
         >
           Unlock
-        </button>
+        </SubmitButton>
       </form>
     </div>
   );

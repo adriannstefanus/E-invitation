@@ -3,6 +3,8 @@
 import { FormEvent, useState } from "react";
 import { submitRsvp } from "@/app/invite/actions";
 import { InvitationSection } from "@/components/invitation/InvitationSection";
+import { useInviteBusy } from "@/components/invitation/InviteBusy";
+import { useToast } from "@/components/ui/Toast";
 import { invitationMedia } from "@/data/media";
 import type { RsvpStatus } from "@/lib/types";
 
@@ -30,18 +32,28 @@ export function RsvpSection({
   const [saved, setSaved] = useState(rsvpStatus !== "pending");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const toast = useToast();
+  const setBusy = useInviteBusy();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setPending(true);
-    const result = await submitRsvp(new FormData(event.currentTarget));
-    setPending(false);
-    if (!result.ok) {
-      setError(result.error ?? "Could not send RSVP.");
-      return;
+    setBusy(true);
+    try {
+      const result = await submitRsvp(new FormData(event.currentTarget));
+      if (!result.ok) {
+        const message = result.error ?? "Could not send RSVP.";
+        setError(message);
+        toast({ tone: "error", message });
+        return;
+      }
+      setSaved(true);
+      toast("RSVP saved.");
+    } finally {
+      setPending(false);
+      setBusy(false);
     }
-    setSaved(true);
   }
 
   return (
@@ -116,7 +128,7 @@ export function RsvpSection({
             disabled={pending}
             className="min-h-11 w-full rounded-full bg-accent text-sm tracking-wide text-white disabled:opacity-60"
           >
-            {saved ? "Update RSVP" : "Send RSVP"}
+            {pending ? "Saving…" : saved ? "Update RSVP" : "Send RSVP"}
           </button>
         </form>
       )}

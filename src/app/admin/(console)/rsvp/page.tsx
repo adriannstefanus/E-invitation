@@ -1,4 +1,6 @@
 import { AdminShell, SetupNotice, TypeBadge } from "@/components/admin/AdminUi";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { listGuests } from "@/lib/db";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import {
@@ -59,11 +61,17 @@ export default async function RsvpAdminPage({ searchParams }: RsvpPageProps) {
             </option>
           ))}
         </select>
-        <button className="rounded-md bg-zinc-900 px-3 py-2 text-sm text-white">
+        <SubmitButton
+          pendingLabel="Filtering…"
+          className="rounded-md bg-zinc-900 px-3 py-2 text-sm text-white"
+        >
           Filter
-        </button>
+        </SubmitButton>
       </form>
 
+      {guests.length === 0 ? (
+        <EmptyState title="No RSVPs match these filters." />
+      ) : (
       <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-zinc-200 text-zinc-500">
@@ -91,6 +99,7 @@ export default async function RsvpAdminPage({ searchParams }: RsvpPageProps) {
           </tbody>
         </table>
       </div>
+      )}
     </AdminShell>
   );
 }

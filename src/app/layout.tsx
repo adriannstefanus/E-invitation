@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Outfit } from "next/font/google";
+import { AppFeedback } from "@/components/ui/AppFeedback";
 import "./globals.css";
 
 const display = Cormorant_Garamond({
@@ -34,7 +35,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${display.variable} ${sans.variable} h-full antialiased`}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <AppFeedback>{children}</AppFeedback>
+      </body>
     </html>
   );
 }

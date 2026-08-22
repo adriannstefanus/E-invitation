@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   checkInGuestForm,
@@ -8,9 +7,11 @@ import {
   undoCheckIn,
   updateGuest,
 } from "@/app/admin/actions";
+import { BackLink } from "@/components/admin/BackLink";
 import { ConfirmSubmit, CopyText } from "@/components/admin/AdminControls";
 import { AdminShell, SetupNotice, TypeBadge } from "@/components/admin/AdminUi";
 import { QrImage } from "@/components/admin/QrImage";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { formatDoorCode } from "@/lib/door-code-format";
 import { getGuestById } from "@/lib/db";
 import { getInviteUrl } from "@/lib/invite-url";
@@ -25,25 +26,16 @@ import {
 
 type GuestDetailPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{
-    rotated?: string;
-    saved?: string;
-    arrived?: string;
-    undone?: string;
-    rsvp?: string;
-  }>;
 };
 
 export default async function GuestDetailPage({
   params,
-  searchParams,
 }: GuestDetailPageProps) {
   if (!isSupabaseConfigured()) {
     return <SetupNotice />;
   }
 
   const { id } = await params;
-  const flags = await searchParams;
   const guest = await getGuestById(id);
   if (!guest) {
     notFound();
@@ -56,11 +48,7 @@ export default async function GuestDetailPage({
 
   return (
     <AdminShell title={guest.name}>
-      <p className="mb-4">
-        <Link href="/admin/guests" className="text-sm text-zinc-500 hover:underline">
-          Back to guests
-        </Link>
-      </p>
+      <BackLink href="/admin/guests">Back to guests</BackLink>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <TypeBadge type={guest.guest_type} />
@@ -73,32 +61,6 @@ export default async function GuestDetailPage({
             : "Not checked in"}
         </span>
       </div>
-
-      {flags.saved ? (
-        <p className="mb-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          Guest details saved.
-        </p>
-      ) : null}
-      {flags.arrived ? (
-        <p className="mb-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          Marked as arrived.
-        </p>
-      ) : null}
-      {flags.undone ? (
-        <p className="mb-4 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Check-in was undone.
-        </p>
-      ) : null}
-      {flags.rsvp ? (
-        <p className="mb-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          RSVP updated.
-        </p>
-      ) : null}
-      {flags.rotated ? (
-        <p className="mb-4 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Invite link was rotated. The old QR no longer works.
-        </p>
-      ) : null}
 
       <div className="grid gap-6 md:grid-cols-2">
         <form
@@ -181,9 +143,12 @@ export default async function GuestDetailPage({
                 className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2"
               />
             </label>
-            <button className="rounded-md bg-zinc-900 px-3 py-2 text-sm text-white">
+            <SubmitButton
+              pendingLabel="Saving…"
+              className="rounded-md bg-zinc-900 px-3 py-2 text-sm text-white"
+            >
               Save changes
-            </button>
+            </SubmitButton>
           </div>
         </form>
 
@@ -276,9 +241,12 @@ export default async function GuestDetailPage({
                   className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2"
                 />
               </label>
-              <button className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white">
+              <SubmitButton
+                pendingLabel="Saving…"
+                className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white"
+              >
                 Save RSVP
-              </button>
+              </SubmitButton>
             </form>
           </div>
 
@@ -297,9 +265,12 @@ export default async function GuestDetailPage({
                   name="next"
                   value={`/admin/guests/${guest.id}?undone=1`}
                 />
-                <button className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm">
+                <SubmitButton
+                  pendingLabel="Undoing…"
+                  className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm"
+                >
                   Undo check-in
-                </button>
+                </SubmitButton>
               </form>
             ) : (
               <form action={checkInGuestForm} className="mt-3">
@@ -310,9 +281,12 @@ export default async function GuestDetailPage({
                   name="next"
                   value={`/admin/guests/${guest.id}?arrived=1`}
                 />
-                <button className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white">
+                <SubmitButton
+                  pendingLabel="Saving…"
+                  className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white"
+                >
                   Mark arrived
-                </button>
+                </SubmitButton>
               </form>
             )}
           </div>
