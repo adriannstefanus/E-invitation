@@ -10,15 +10,16 @@ import {
 import { BackLink } from "@/components/admin/BackLink";
 import { ConfirmSubmit, CopyText } from "@/components/admin/AdminControls";
 import { AdminShell, SetupNotice, TypeBadge } from "@/components/admin/AdminUi";
+import { GuestTypeOptions } from "@/components/admin/TypeBadge";
+import { WhatsAppSend } from "@/components/admin/WhatsAppSend";
 import { QrImage } from "@/components/admin/QrImage";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { formatDoorCode } from "@/lib/door-code-format";
-import { getGuestById } from "@/lib/db";
+import { getGuestById, getSiteSettings } from "@/lib/db";
 import { getInviteUrl } from "@/lib/invite-url";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { getWhatsAppInviteUrl } from "@/lib/whatsapp";
+import { toWhatsAppPhone } from "@/lib/whatsapp";
 import {
-  GUEST_TYPES,
   INVITE_EVENT_LABELS,
   INVITE_EVENTS,
   RSVP_STATUSES,
@@ -41,8 +42,11 @@ export default async function GuestDetailPage({
     notFound();
   }
 
-  const inviteUrl = await getInviteUrl(guest.token);
-  const whatsappUrl = getWhatsAppInviteUrl(guest, inviteUrl);
+  const [inviteUrl, settings] = await Promise.all([
+    getInviteUrl(guest.token),
+    getSiteSettings(),
+  ]);
+  const hasPhone = Boolean(toWhatsAppPhone(guest.phone));
   const rsvpWhen = formatWhen(guest.rsvp_at);
   const arrivedWhen = formatWhen(guest.checked_in_at);
 
@@ -95,11 +99,7 @@ export default async function GuestDetailPage({
                 defaultValue={guest.guest_type}
                 className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2"
               >
-                {GUEST_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
+                <GuestTypeOptions />
               </select>
             </label>
             <label className="block text-sm">
@@ -165,19 +165,13 @@ export default async function GuestDetailPage({
                 label="Copy code"
               />
               <CopyText value={inviteUrl} label="Copy link" />
-              {whatsappUrl ? (
-                <>
-                  <CopyText value={whatsappUrl} label="Copy WhatsApp" />
-                  <a
-                    href={whatsappUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50"
-                  >
-                    WhatsApp guest
-                  </a>
-                </>
-              ) : (
+              <WhatsAppSend
+                guest={guest}
+                inviteUrl={inviteUrl}
+                templates={settings.whatsappTemplates}
+                label="WhatsApp guest"
+              />
+              {hasPhone ? null : (
                 <span className="px-1 py-1.5 text-sm text-zinc-400">
                   Add a phone to send WhatsApp
                 </span>

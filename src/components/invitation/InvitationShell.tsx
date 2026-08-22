@@ -29,6 +29,7 @@ import { StaySection } from "@/components/invitation/StaySection";
 import { VerseSection } from "@/components/invitation/VerseSection";
 import { WeddingPartySection } from "@/components/invitation/WeddingPartySection";
 import type { GuestbookComment, InviteEvent, RsvpStatus } from "@/lib/types";
+import type { SiteSettings } from "@/lib/site-settings";
 
 type InvitationShellProps = {
   guestName: string;
@@ -39,6 +40,7 @@ type InvitationShellProps = {
   invitedTo?: InviteEvent;
   doorCode?: string;
   comments?: Pick<GuestbookComment, "id" | "name" | "message">[];
+  settings: SiteSettings;
 };
 
 export function InvitationShell({
@@ -50,19 +52,24 @@ export function InvitationShell({
   invitedTo = "both",
   doorCode,
   comments = [],
+  settings,
 }: InvitationShellProps) {
   const [opened, setOpened] = useState(false);
+  const couple = settings.couple;
 
   return (
-    <div className="h-dvh bg-[#e8e0d4]">
+    <div data-theme={settings.theme} className="h-dvh bg-[var(--chrome)]">
       <div
-        className={`invitation-snap relative isolate mx-auto h-dvh w-full max-w-[430px] bg-background shadow-[0_0_40px_rgba(63,58,52,0.12)] ${
+        className={`invitation-snap relative isolate mx-auto h-dvh w-full max-w-[430px] bg-background shadow-[0_0_40px_color-mix(in_srgb,var(--foreground)_12%,transparent)] ${
           opened ? "snap-y snap-mandatory overflow-y-auto" : "overflow-hidden"
         }`}
       >
         <InviteBusyProvider>
           <Cover
             guestName={guestName}
+            brideName={couple.brideName}
+            groomName={couple.groomName}
+            weddingAt={couple.weddingAt}
             opened={opened}
             onOpen={() => setOpened(true)}
           />
@@ -77,18 +84,35 @@ export function InvitationShell({
                   doorCode={doorCode}
                 />
               ) : null}
-              <CoupleSection />
+              <CoupleSection
+                brideName={couple.brideName}
+                groomName={couple.groomName}
+              />
               <VerseSection />
               <ParentsSection />
-              <CountdownSection />
-              <BrideDetailSection />
-              <GroomDetailSection />
+              <CountdownSection weddingAt={couple.weddingAt} />
+              <BrideDetailSection
+                person={{
+                  role: "The bride",
+                  name: couple.brideName,
+                  fullName: couple.brideFullName,
+                  parents: couple.brideParents,
+                }}
+              />
+              <GroomDetailSection
+                person={{
+                  role: "The groom",
+                  name: couple.groomName,
+                  fullName: couple.groomFullName,
+                  parents: couple.groomParents,
+                }}
+              />
               <LoveStorySection />
               <WeddingPartySection />
-              <EventsSection invitedTo={invitedTo} />
-              <LocationSection invitedTo={invitedTo} />
+              <EventsSection invitedTo={invitedTo} events={settings.events} />
+              <LocationSection invitedTo={invitedTo} events={settings.events} />
               <RundownSection />
-              <DressCodeSection />
+              <DressCodeSection dressCode={settings.dressCode} />
               <StaySection />
               <LiveStreamSection />
               <InstagramSection />
@@ -99,14 +123,17 @@ export function InvitationShell({
                 rsvpCount={rsvpCount}
               />
               <GallerySection />
-              <GiftSection />
-              <FaqSection />
+              <GiftSection accounts={settings.bankAccounts} />
+              <FaqSection faq={settings.faq} />
               <CommentsSection
                 guestName={guestName}
                 guestToken={guestToken}
                 comments={comments}
               />
-              <ClosingSection />
+              <ClosingSection
+                brideName={couple.brideName}
+                groomName={couple.groomName}
+              />
             </>
           ) : null}
         </InviteBusyProvider>

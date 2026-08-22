@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { InvitationShell } from "@/components/invitation/InvitationShell";
-import { getGuestByToken, listComments } from "@/lib/db";
+import { getGuestByToken, getSiteSettings, listComments } from "@/lib/db";
 import { getInviteUrl } from "@/lib/invite-url";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { guestInviteName } from "@/lib/types";
@@ -22,9 +22,10 @@ export default async function GuestInvitePage({
     notFound();
   }
 
-  const [inviteUrl, comments] = await Promise.all([
+  const [inviteUrl, comments, settings] = await Promise.all([
     getInviteUrl(guest.token),
     listComments(12),
+    getSiteSettings(),
   ]);
 
   return (
@@ -37,6 +38,7 @@ export default async function GuestInvitePage({
       invitedTo={guest.invited_to}
       doorCode={guest.door_code}
       comments={comments}
+      settings={settings}
     />
   );
 }

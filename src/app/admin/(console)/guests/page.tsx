@@ -2,13 +2,14 @@ import Link from "next/link";
 import { createGuest, importGuestsCsv } from "@/app/admin/actions";
 import { CopyText } from "@/components/admin/AdminControls";
 import { AdminShell, SetupNotice, TypeBadge } from "@/components/admin/AdminUi";
+import { GuestTypeOptions } from "@/components/admin/TypeBadge";
+import { WhatsAppSend } from "@/components/admin/WhatsAppSend";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormPageBusy } from "@/components/ui/PageBusy";
 import { SubmitButton } from "@/components/ui/SubmitButton";
-import { listGuests } from "@/lib/db";
+import { getSiteSettings, listGuests } from "@/lib/db";
 import { getSiteOrigin } from "@/lib/invite-url";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { getWhatsAppInviteUrl } from "@/lib/whatsapp";
 import {
   GUEST_TYPES,
   INVITE_EVENT_LABELS,
@@ -59,7 +60,7 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
       ? params.door
       : "all";
 
-  const [guests, allGuests] = await Promise.all([
+  const [guests, allGuests, settings] = await Promise.all([
     listGuests({
       search: params.q,
       guestType,
@@ -68,6 +69,7 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
       attendance,
     }),
     listGuests(),
+    getSiteSettings(),
   ]);
 
   const origin = await getSiteOrigin();
@@ -100,11 +102,7 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
           className="rounded-md border border-zinc-300 px-3 py-2 text-sm"
         >
           <option value="all">All types</option>
-          {GUEST_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
+          <GuestTypeOptions />
         </select>
         <select
           name="rsvp"
@@ -185,7 +183,6 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
             <tbody>
               {guests.map((guest) => {
                 const inviteUrl = inviteById[guest.id];
-                const whatsappUrl = getWhatsAppInviteUrl(guest, inviteUrl);
                 return (
                 <tr
                   key={guest.id}
@@ -229,16 +226,11 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-2">
                       <CopyText value={inviteUrl} label="Copy link" />
-                      {whatsappUrl ? (
-                        <a
-                          href={whatsappUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50"
-                        >
-                          WhatsApp
-                        </a>
-                      ) : null}
+                      <WhatsAppSend
+                        guest={guest}
+                        inviteUrl={inviteUrl}
+                        templates={settings.whatsappTemplates}
+                      />
                     </div>
                   </td>
                 </tr>
@@ -278,11 +270,7 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
                 name="guest_type"
                 className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2"
               >
-                {GUEST_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
+                <GuestTypeOptions />
               </select>
             </label>
             <label className="block text-sm">

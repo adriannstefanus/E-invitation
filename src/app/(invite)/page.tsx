@@ -1,6 +1,7 @@
 import { InvitationShell } from "@/components/invitation/InvitationShell";
-import { listComments } from "@/lib/db";
+import { getSiteSettings, listComments } from "@/lib/db";
 import { readGuestName } from "@/lib/guest-name";
+import { defaultSiteSettings } from "@/lib/site-settings";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 type HomeProps = {
@@ -9,9 +10,15 @@ type HomeProps = {
 
 export default async function Home({ searchParams }: HomeProps) {
   const params = await searchParams;
-  const comments = isSupabaseConfigured() ? await listComments(12) : [];
+  const configured = isSupabaseConfigured();
+  const comments = configured ? await listComments(12) : [];
+  const settings = configured ? await getSiteSettings() : defaultSiteSettings;
 
   return (
-    <InvitationShell guestName={readGuestName(params.to)} comments={comments} />
+    <InvitationShell
+      guestName={readGuestName(params.to)}
+      comments={comments}
+      settings={settings}
+    />
   );
 }

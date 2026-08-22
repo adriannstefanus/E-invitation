@@ -1,13 +1,23 @@
-import { AdminShell } from "@/components/admin/AdminUi";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { AdminShell, SetupNotice } from "@/components/admin/AdminUi";
+import { InvitationSettings } from "@/components/admin/InvitationSettings";
+import { getSiteSettings } from "@/lib/db";
+import { isSupabaseConfigured } from "@/lib/supabase";
 
-export default function InvitationCustomizePage() {
+export default async function InvitationCustomizePage() {
+  if (!isSupabaseConfigured()) {
+    return <SetupNotice />;
+  }
+
+  const settings = await getSiteSettings();
+
   return (
     <AdminShell title="Invitation">
-      <EmptyState
-        title="Theme colors and section copy"
-        body="Coming soon. This module will let you edit colors and each invitation section. The public invite still reads from the current files."
-      />
+      <p className="mb-6 max-w-2xl text-sm leading-relaxed text-zinc-600">
+        Public invite settings, grouped by module. Later items stay in the same
+        group until we build them. Run{" "}
+        <code>supabase/migrate-site-settings.sql</code> once if save fails.
+      </p>
+      <InvitationSettings settings={settings} />
     </AdminShell>
   );
 }

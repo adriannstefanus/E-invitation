@@ -1,5 +1,11 @@
+import { cache } from "react";
 import { createDoorCode } from "@/lib/door-code";
-import { createServiceClient } from "@/lib/supabase";
+import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase";
+import {
+  defaultSiteSettings,
+  mergeSiteSettings,
+  type SiteSettings,
+} from "@/lib/site-settings";
 import type {
   Gift,
   GuestbookComment,
@@ -145,4 +151,40 @@ export async function listGifts() {
     throw error;
   }
   return (data ?? []) as Gift[];
+}
+
+export const getSiteSettings = cache(async (): Promise<SiteSettings> => {
+  if (!isSupabaseConfigured()) {
+    return defaultSiteSettings;
+  }
+
+  try {
+    const { data, error } = await createServiceClient()
+      .from("site_settings")
+      .select("data")
+      .eq("id", "default")
+      .maybeSingle();
+
+    if (error) {
+      return defaultSiteSettings;
+    }
+
+    return mergeSiteSettings(data?.data);
+  } catch {
+    return defaultSiteSettings;
+  }
+});
+
+export async function saveSiteSettings(next: SiteSettings) {
+  const { error } = await createServiceClient()
+    .from("site_settings")
+    .upsert({
+      id: "default",
+      data: next,
+      updated_at: new Date().toISOString(),
+    });
+
+  if (error) {
+    throw error;
+  }
 }

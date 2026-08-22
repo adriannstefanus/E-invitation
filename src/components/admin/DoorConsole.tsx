@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { checkInGuest, lookupDoorGuest, undoCheckIn } from "@/app/admin/actions";
 import { ConfirmSubmit } from "@/components/admin/AdminControls";
 import { DoorScanner } from "@/components/admin/DoorScanner";
-import { TypeBadge } from "@/components/admin/AdminUi";
+import { TypeBadge, useGuestTypes } from "@/components/admin/TypeBadge";
 import { useToast } from "@/components/ui/Toast";
 import { formatDoorCode } from "@/lib/door-code-format";
 import {
@@ -263,6 +263,8 @@ function ResultCard({
   onClose: () => void;
   onCheckIn: () => void;
 }) {
+  const types = useGuestTypes();
+
   if (lookup.status === "missing") {
     return (
       <div className="rounded-2xl border-2 border-red-300 bg-red-50 p-5">
@@ -280,23 +282,25 @@ function ResultCard({
   }
 
   const { guest } = lookup;
+  const typeStyle = types[guest.guest_type];
   const already = Boolean(guest.checked_in_at);
   const wrongEvent = isWrongDoorEvent(gate, guest.invited_to);
   const rsvpFlag = guest.rsvp_status !== "yes";
   const tone = already
-    ? "border-amber-400 bg-amber-50"
-    : guest.guest_type === "vip"
-      ? "border-amber-400 bg-amber-50"
-      : guest.guest_type === "family"
-        ? "border-stone-400 bg-stone-100"
-        : guest.guest_type === "vendor"
-          ? "border-sky-400 bg-sky-50"
-          : "border-zinc-300 bg-white";
+    ? "border-2 border-amber-400 bg-amber-50"
+    : "border-2";
 
   return (
-    <div className={`rounded-2xl border-2 p-5 ${tone}`}>
+    <div
+      className={`rounded-2xl p-5 ${tone}`}
+      style={
+        already
+          ? undefined
+          : { borderColor: typeStyle.bg, backgroundColor: typeStyle.bg }
+      }
+    >
       <p className="text-sm tracking-wide text-zinc-500 uppercase">
-        {already ? "Already arrived" : guest.guest_type}
+        {already ? "Already arrived" : typeStyle.label}
       </p>
       <p className="mt-1 text-3xl font-semibold">{guest.name}</p>
       <p className="mt-1 text-lg text-zinc-700">{guestInviteName(guest)}</p>

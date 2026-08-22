@@ -44,6 +44,13 @@ export function flashFromSearchParams(
     };
   }
 
+  if (params.get("error") === "settings") {
+    return {
+      tone: "error",
+      message: "Could not save invitation settings. Run the site_settings SQL if this is the first time.",
+    };
+  }
+
   if (params.get("error") === "create") {
     const detail = params.get("detail");
     return {
@@ -52,6 +59,10 @@ export function flashFromSearchParams(
         ? `Could not save the guest: ${detail}`
         : "Could not save the guest. Try again.",
     };
+  }
+
+  if (params.get("saved") === "invite") {
+    return { tone: "success", message: "Invitation settings saved." };
   }
 
   if (params.get("saved")) {

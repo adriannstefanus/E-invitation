@@ -1,4 +1,5 @@
 import { AdminShell, SetupNotice, TypeBadge } from "@/components/admin/AdminUi";
+import { GuestTypeOptions } from "@/components/admin/TypeBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { listGuests } from "@/lib/db";
@@ -54,12 +55,7 @@ export default async function RsvpAdminPage({ searchParams }: RsvpPageProps) {
           defaultValue={guestType}
           className="rounded-md border border-zinc-300 px-3 py-2 text-sm"
         >
-          <option value="all">All types</option>
-          {GUEST_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
+          <GuestTypeOptions includeAll />
         </select>
         <SubmitButton
           pendingLabel="Filtering…"

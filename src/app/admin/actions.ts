@@ -8,7 +8,8 @@ import {
   adminCookieOptions,
   createAdminSessionValue,
 } from "@/lib/admin-session";
-import { allocateDoorCodes, getGuestByDoorCode, getGuestById, getGuestByToken } from "@/lib/db";
+import { allocateDoorCodes, getGuestByDoorCode, getGuestById, getGuestByToken, getSiteSettings, saveSiteSettings } from "@/lib/db";
+import { isThemeId, mergeSiteSettings, combineDateTime, type SiteSettings } from "@/lib/site-settings";
 import { isDoorCodeQuery } from "@/lib/door-code";
 import { createGuestToken, parseInviteToken } from "@/lib/guest-token";
 import { createServiceClient } from "@/lib/supabase";
@@ -444,4 +445,151 @@ export async function deleteGift(formData: FormData) {
   }
   await createServiceClient().from("gifts").delete().eq("id", id);
   revalidatePath("/admin/gifts");
+}
+
+export async function saveInvitationSettings(formData: FormData) {
+  const section = String(formData.get("section") ?? "");
+  const current = await getSiteSettings();
+  let next = { ...current };
+
+  try {
+    if (section === "couple") {
+      next = {
+        ...next,
+        couple: {
+          brideName: String(formData.get("brideName") ?? "").trim() || "Bride",
+          groomName: String(formData.get("groomName") ?? "").trim() || "Groom",
+          brideFullName: String(formData.get("brideFullName") ?? "").trim(),
+          groomFullName: String(formData.get("groomFullName") ?? "").trim(),
+          brideParents: String(formData.get("brideParents") ?? "").trim(),
+          groomParents: String(formData.get("groomParents") ?? "").trim(),
+          weddingAt: combineDateTime(
+            String(formData.get("weddingDate") ?? "").trim(),
+            String(formData.get("weddingTime") ?? "").trim(),
+          ),
+        },
+      };
+    } else if (section === "theme") {
+      const theme = String(formData.get("theme") ?? "");
+      if (!isThemeId(theme)) {
+        redirect("/admin/invitation?error=settings");
+      }
+      next = { ...next, theme };
+    } else if (section === "events") {
+      next = {
+        ...next,
+        events: [
+          {
+            id: "ceremony",
+            title: String(formData.get("ceremony_title") ?? "").trim() || "Ceremony",
+            date: String(formData.get("ceremony_date") ?? "").trim(),
+            time: String(formData.get("ceremony_time") ?? "").trim(),
+            place: String(formData.get("ceremony_place") ?? "").trim(),
+            mapsUrl: String(formData.get("ceremony_maps") ?? "").trim(),
+            wazeUrl: String(formData.get("ceremony_waze") ?? "").trim(),
+          },
+          {
+            id: "reception",
+            title: String(formData.get("reception_title") ?? "").trim() || "Reception",
+            date: String(formData.get("reception_date") ?? "").trim(),
+            time: String(formData.get("reception_time") ?? "").trim(),
+            place: String(formData.get("reception_place") ?? "").trim(),
+            mapsUrl: String(formData.get("reception_maps") ?? "").trim(),
+            wazeUrl: String(formData.get("reception_waze") ?? "").trim(),
+          },
+        ],
+      };
+    } else if (section === "whatsapp") {
+      const payload = asRecordList(parseJsonPayload(formData.get("payload")));
+      if (payload.length === 0) {
+        redirect("/admin/invitation?error=settings");
+      }
+      next = {
+        ...next,
+        whatsappTemplates: payload.map((item, index) => ({
+          id: String(item.id ?? `tpl-${index + 1}`),
+          name: String(item.name ?? "").trim() || `Template ${index + 1}`,
+          body: String(item.body ?? "").trim(),
+        })),
+      };
+    } else if (section === "banks") {
+      const payload = asRecordList(parseJsonPayload(formData.get("payload")));
+      next = {
+        ...next,
+        bankAccounts: payload.map((item) => ({
+          bank: String(item.bank ?? "").trim(),
+          holder: String(item.holder ?? "").trim(),
+          number: String(item.number ?? "").trim(),
+        })),
+      };
+    } else if (section === "faq") {
+      const payload = asRecordList(parseJsonPayload(formData.get("payload")));
+      next = {
+        ...next,
+        faq: payload.map((item) => ({
+          question: String(item.question ?? "").trim(),
+          answer: String(item.answer ?? "").trim(),
+        })),
+      };
+    } else if (section === "dress") {
+      const payload = asRecordList(parseJsonPayload(formData.get("payload")));
+      next = {
+        ...next,
+        dressCode: {
+          label: String(formData.get("label") ?? "").trim(),
+          note: String(formData.get("note") ?? "").trim(),
+          colors: payload.map((item) => ({
+            name: String(item.name ?? "").trim(),
+            hex: String(item.hex ?? "").trim() || "#d4b896",
+          })),
+        },
+      };
+    } else if (section === "guestTypes") {
+      const payload = parseJsonPayload(formData.get("payload"));
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        redirect("/admin/invitation?error=settings");
+      }
+      next = mergeSiteSettings({
+        ...next,
+        guestTypes: payload as SiteSettings["guestTypes"],
+      });
+    } else {
+      redirect("/admin/invitation?error=settings");
+    }
+
+    await saveSiteSettings(next);
+  } catch (error) {
+    if (isNextRedirect(error)) {
+      throw error;
+    }
+    redirect("/admin/invitation?error=settings");
+  }
+
+  revalidatePath("/");
+  revalidatePath("/g", "layout");
+  revalidatePath("/admin");
+  revalidatePath("/admin/invitation");
+  redirect("/admin/invitation?saved=invite");
+}
+
+function parseJsonPayload(value: FormDataEntryValue | null): unknown {
+  if (typeof value !== "string" || !value) {
+    return null;
+  }
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+function asRecordList(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? value.map(asRecord) : [];
 }

@@ -1,22 +1,28 @@
 import { InvitationSection } from "@/components/invitation/InvitationSection";
 import { PhotoSlot } from "@/components/invitation/PhotoSlot";
-import { personDetails } from "@/data/content";
 import { invitationMedia } from "@/data/media";
 
-export function BrideDetailSection() {
+type Person = {
+  role: string;
+  name: string;
+  fullName: string;
+  parents: string;
+};
+
+export function BrideDetailSection({ person }: { person: Person }) {
   return (
     <PersonDetailSection
-      person={personDetails.bride}
+      person={person}
       photo={invitationMedia.couple.bride}
       background={invitationMedia.bride.background}
     />
   );
 }
 
-export function GroomDetailSection() {
+export function GroomDetailSection({ person }: { person: Person }) {
   return (
     <PersonDetailSection
-      person={personDetails.groom}
+      person={person}
       photo={invitationMedia.couple.groom}
       background={invitationMedia.groom.background}
     />
@@ -28,7 +34,7 @@ function PersonDetailSection({
   photo,
   background,
 }: {
-  person: (typeof personDetails)[keyof typeof personDetails];
+  person: Person;
   photo: string;
   background: string;
 }) {

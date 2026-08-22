@@ -1,12 +1,53 @@
 @import "tailwindcss";
 
 :root {
+  --chrome: #e8e0d4;
   --background: #f7f1e8;
   --foreground: #3f3a34;
   --accent: #8a6a4f;
   --muted: #7a736a;
   --card: #fffdf8;
   --line: #e4d8c8;
+}
+
+[data-theme="sage"] {
+  --chrome: #d7e0d4;
+  --background: #eef3ea;
+  --foreground: #2f3b32;
+  --accent: #5c7a62;
+  --muted: #6d7a70;
+  --card: #f7faf5;
+  --line: #cfd8c8;
+}
+
+[data-theme="burgundy"] {
+  --chrome: #e4d6d4;
+  --background: #f6eeec;
+  --foreground: #3a2a2c;
+  --accent: #8b3d4a;
+  --muted: #7a6568;
+  --card: #fff8f6;
+  --line: #e4d0ce;
+}
+
+[data-theme="navy"] {
+  --chrome: #d5dbe4;
+  --background: #eef1f6;
+  --foreground: #243044;
+  --accent: #3d5a80;
+  --muted: #66758a;
+  --card: #f7f9fc;
+  --line: #cfd6e0;
+}
+
+[data-theme="blush"] {
+  --chrome: #ead9d8;
+  --background: #f8eeed;
+  --foreground: #4a3236;
+  --accent: #c47b86;
+  --muted: #8a6f74;
+  --card: #fff8f7;
+  --line: #e8d4d3;
 }
 
 @theme inline {
@@ -23,7 +64,7 @@
 html,
 body {
   min-height: 100%;
-  background: #e8e0d4;
+  background: var(--chrome);
 }
 
 body {

@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { bankAccounts } from "@/data/content";
 import { invitationMedia } from "@/data/media";
+import type { BankAccount } from "@/lib/site-settings";
 
-export function GiftSection() {
+export function GiftSection({ accounts }: { accounts: BankAccount[] }) {
   return (
     <InvitationSection image={invitationMedia.gift.background} mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">
@@ -16,7 +16,7 @@ export function GiftSection() {
         Send a gift online to one of these accounts.
       </p>
       <div className="mt-4 w-full space-y-2">
-        {bankAccounts.map((account) => (
+        {accounts.map((account) => (
           <BankCard
             key={`${account.bank}-${account.number}`}
             account={account}
@@ -27,7 +27,7 @@ export function GiftSection() {
   );
 }
 
-function BankCard({ account }: { account: (typeof bankAccounts)[number] }) {
+function BankCard({ account }: { account: BankAccount }) {
   const [copied, setCopied] = useState(false);
 
   async function copyNumber() {

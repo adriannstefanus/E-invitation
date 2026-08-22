@@ -1,8 +1,8 @@
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { faq } from "@/data/content";
 import { invitationMedia } from "@/data/media";
+import type { FaqItem } from "@/lib/site-settings";
 
-export function FaqSection() {
+export function FaqSection({ faq }: { faq: FaqItem[] }) {
   return (
     <InvitationSection image={invitationMedia.faq.background} mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">FAQ</p>

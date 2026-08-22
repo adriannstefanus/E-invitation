@@ -1,5 +1,5 @@
 import { AdminShell, SetupNotice } from "@/components/admin/AdminUi";
-import { listGuests } from "@/lib/db";
+import { getSiteSettings, listGuests } from "@/lib/db";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { GUEST_TYPES } from "@/lib/types";
 
@@ -8,7 +8,10 @@ export default async function AdminDashboardPage() {
     return <SetupNotice />;
   }
 
-  const guests = await listGuests();
+  const [guests, settings] = await Promise.all([
+    listGuests(),
+    getSiteSettings(),
+  ]);
   const arrived = guests.filter((guest) => guest.checked_in_at);
   const rsvpYes = guests.filter((guest) => guest.rsvp_status === "yes");
   const rsvpNo = guests.filter((guest) => guest.rsvp_status === "no");
@@ -29,7 +32,7 @@ export default async function AdminDashboardPage() {
         {GUEST_TYPES.map((type) => (
           <Stat
             key={type}
-            label={type}
+            label={settings.guestTypes[type].label}
             value={guests.filter((guest) => guest.guest_type === type).length}
           />
         ))}

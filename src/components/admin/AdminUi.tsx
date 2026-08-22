@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { logoutAdmin } from "@/app/admin/actions";
 
+export { TypeBadge } from "@/components/admin/TypeBadge";
+
 const links = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/guests", label: "Guests" },
@@ -83,24 +85,5 @@ export function SetupNotice() {
         </p>
       </div>
     </div>
-  );
-}
-
-export function TypeBadge({ type }: { type: string }) {
-  const tone =
-    type === "vip"
-      ? "bg-amber-100 text-amber-900"
-      : type === "family"
-        ? "bg-stone-200 text-stone-800"
-        : type === "vendor"
-          ? "bg-sky-100 text-sky-900"
-          : "bg-zinc-100 text-zinc-700";
-
-  return (
-    <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-xs tracking-wide uppercase ${tone}`}
-    >
-      {type}
-    </span>
   );
 }

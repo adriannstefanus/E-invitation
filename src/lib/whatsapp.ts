@@ -22,6 +22,10 @@ export function toWhatsAppPhone(phone: string | null | undefined) {
   return international;
 }
 
+export function whatsappSendUrl(phone: string, text: string) {
+  return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+}
+
 export function whatsappInviteMessage(guest: Guest, inviteUrl: string) {
   const name = guestInviteName(guest);
   const code = guest.door_code
