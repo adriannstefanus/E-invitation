@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useMemo, useState, useSyncExternalStore } from "react";
+import { FormEvent, useState } from "react";
+import { submitComment } from "@/app/invite/actions";
 import { InvitationSection } from "@/components/invitation/InvitationSection";
 import { invitationMedia } from "@/data/media";
 
@@ -10,51 +11,25 @@ type GuestComment = {
   message: string;
 };
 
-const STORAGE_KEY = "invitation-guest-comments";
-const COMMENTS_EVENT = "invitation-comments";
-
-function subscribe(onChange: () => void) {
-  window.addEventListener("storage", onChange);
-  window.addEventListener(COMMENTS_EVENT, onChange);
-  return () => {
-    window.removeEventListener("storage", onChange);
-    window.removeEventListener(COMMENTS_EVENT, onChange);
-  };
-}
-
-function getSnapshot() {
-  return window.localStorage.getItem(STORAGE_KEY) ?? "[]";
-}
-
-function getServerSnapshot() {
-  return "[]";
-}
-
-function parseComments(raw: string): GuestComment[] {
-  try {
-    const parsed = JSON.parse(raw) as GuestComment[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
 type CommentsSectionProps = {
   guestName: string;
+  guestToken?: string;
+  comments?: GuestComment[];
 };
 
-export function CommentsSection({ guestName }: CommentsSectionProps) {
+export function CommentsSection({
+  guestName,
+  guestToken,
+  comments = [],
+}: CommentsSectionProps) {
   const defaultName = guestName === "Guest" ? "" : guestName;
   const [name, setName] = useState(defaultName);
   const [message, setMessage] = useState("");
-  const rawComments = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot,
-  );
-  const comments = useMemo(() => parseComments(rawComments), [rawComments]);
+  const [items, setItems] = useState(comments);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextName = name.trim();
     const nextMessage = message.trim();
@@ -62,12 +37,21 @@ export function CommentsSection({ guestName }: CommentsSectionProps) {
       return;
     }
 
-    const nextComments = [
+    setError(null);
+    setPending(true);
+    const formData = new FormData(event.currentTarget);
+    const result = await submitComment(formData);
+    setPending(false);
+
+    if (!result.ok) {
+      setError(result.error ?? "Could not send wish.");
+      return;
+    }
+
+    setItems((current) => [
       { id: crypto.randomUUID(), name: nextName, message: nextMessage },
-      ...comments,
-    ];
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextComments));
-    window.dispatchEvent(new Event(COMMENTS_EVENT));
+      ...current,
+    ]);
     setMessage("");
   }
 
@@ -78,6 +62,9 @@ export function CommentsSection({ guestName }: CommentsSectionProps) {
       </p>
       <h2 className="font-display mt-3 text-3xl">Leave a wish</h2>
       <form className="mt-4 w-full space-y-2 text-left" onSubmit={handleSubmit}>
+        {guestToken ? (
+          <input type="hidden" name="token" value={guestToken} />
+        ) : null}
         <label className="block">
           <span className="sr-only">Name</span>
           <input
@@ -102,18 +89,20 @@ export function CommentsSection({ guestName }: CommentsSectionProps) {
         </label>
         <button
           type="submit"
-          className="min-h-11 w-full rounded-full bg-accent text-sm tracking-wide text-white"
+          disabled={pending}
+          className="min-h-11 w-full rounded-full bg-accent text-sm tracking-wide text-white disabled:opacity-60"
         >
           Send
         </button>
       </form>
+      {error ? <p className="mt-2 text-sm text-accent">{error}</p> : null}
       <ul className="mt-3 w-full space-y-2 overflow-hidden text-left">
-        {comments.length === 0 ? (
+        {items.length === 0 ? (
           <li className="rounded-xl border border-line bg-card/80 px-3 py-3 text-center text-sm text-muted">
             Be the first to leave a wish.
           </li>
         ) : (
-          comments.slice(0, 3).map((comment) => (
+          items.slice(0, 3).map((comment) => (
             <li
               key={comment.id}
               className="rounded-xl border border-line bg-card/90 px-3 py-3"

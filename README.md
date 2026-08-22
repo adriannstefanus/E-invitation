@@ -1,6 +1,6 @@
 # Wedding invitation
 
-Mobile-first wedding invitation site. Personalized guest name is read from `?to=` — no backend in v1.
+Mobile-first wedding invitation site. Personal invites use `/g/[token]`. `?to=Name` is a display-only fallback.
 
 ## Requirements
 
@@ -14,13 +14,22 @@ pnpm install
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and check phone widths (360 / 375 / 390 / 414 / 430). Try a guest name:
-
-```
-http://localhost:3000?to=Andi
-```
+Open [http://localhost:3000](http://localhost:3000) and check phone widths (360 / 375 / 390 / 414 / 430).
 
 Other scripts: `pnpm lint`, `pnpm format`, `pnpm build`.
+
+## Database and admin
+
+1. Create a Supabase project.
+2. Run [`supabase/schema.sql`](supabase/schema.sql) in the SQL editor.
+3. Copy [`.env.example`](.env.example) to `.env.local` and fill the keys plus `ADMIN_PASSWORD` and `ADMIN_SECRET`.
+4. Restart `pnpm dev`.
+
+Staff: [http://localhost:3000/admin](http://localhost:3000/admin)
+
+Add guests (and type: regular / vip / family / vendor), then open each guest to copy `/g/...` and the QR. Guests show that QR at the door; staff scan it on **Door**.
+
+`?to=Andi` still works for a nameless preview without a token.
 
 ## Media
 
@@ -38,15 +47,6 @@ Use the filenames listed in [`public/media/README.md`](public/media/README.md). 
 Photos: WebP, about 1200–1600px. Videos: short muted loop, ~720p, a few MB.
 
 WhatsApp preview: add `public/og.jpg` (1200×630) later and point `openGraph.images` at it in `src/app/layout.tsx`.
-
-## Guest attendance (later)
-
-Not built yet. If it happens, keep this invitation as the public site and add:
-
-- Supabase (guest list from CSV)
-- A staff check-in route such as `/staff`
-
-Personalized links (`?to=Name`) stay frontend-only and do not need that work.
 
 ## Deploy
 

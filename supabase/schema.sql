@@ -1,0 +1,52 @@
+-- Run this in the Supabase SQL editor.
+
+create type guest_type as enum ('regular', 'vip', 'family', 'vendor');
+create type rsvp_status as enum ('pending', 'yes', 'no');
+create type check_in_method as enum ('qr', 'manual');
+create type gift_kind as enum ('angpao', 'physical');
+
+create table guests (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  token text not null unique,
+  guest_type guest_type not null default 'regular',
+  invited_count integer not null default 1 check (invited_count >= 1),
+  phone text,
+  notes text,
+  rsvp_status rsvp_status not null default 'pending',
+  rsvp_count integer,
+  rsvp_at timestamptz,
+  checked_in_at timestamptz,
+  arrived_count integer,
+  check_in_method check_in_method,
+  created_at timestamptz not null default now()
+);
+
+create table comments (
+  id uuid primary key default gen_random_uuid(),
+  guest_id uuid references guests (id) on delete set null,
+  name text not null,
+  message text not null,
+  created_at timestamptz not null default now()
+);
+
+create table gifts (
+  id uuid primary key default gen_random_uuid(),
+  guest_id uuid references guests (id) on delete set null,
+  guest_name text not null,
+  kind gift_kind not null,
+  amount numeric,
+  note text,
+  received_at timestamptz not null default now()
+);
+
+create index guests_name_idx on guests (name);
+create index guests_type_idx on guests (guest_type);
+create index guests_rsvp_idx on guests (rsvp_status);
+create index guests_checked_in_idx on guests (checked_in_at);
+create index comments_created_idx on comments (created_at desc);
+create index gifts_received_idx on gifts (received_at desc);
+
+alter table guests enable row level security;
+alter table comments enable row level security;
+alter table gifts enable row level security;

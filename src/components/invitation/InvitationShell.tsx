@@ -21,17 +21,32 @@ import {
   BrideDetailSection,
   GroomDetailSection,
 } from "@/components/invitation/PersonDetailSection";
+import { QrSection } from "@/components/invitation/QrSection";
 import { RsvpSection } from "@/components/invitation/RsvpSection";
 import { RundownSection } from "@/components/invitation/RundownSection";
 import { StaySection } from "@/components/invitation/StaySection";
 import { VerseSection } from "@/components/invitation/VerseSection";
 import { WeddingPartySection } from "@/components/invitation/WeddingPartySection";
 
+import type { GuestbookComment, RsvpStatus } from "@/lib/types";
+
 type InvitationShellProps = {
   guestName: string;
+  guestToken?: string;
+  inviteUrl?: string;
+  rsvpStatus?: RsvpStatus;
+  rsvpCount?: number | null;
+  comments?: Pick<GuestbookComment, "id" | "name" | "message">[];
 };
 
-export function InvitationShell({ guestName }: InvitationShellProps) {
+export function InvitationShell({
+  guestName,
+  guestToken,
+  inviteUrl,
+  rsvpStatus = "pending",
+  rsvpCount,
+  comments = [],
+}: InvitationShellProps) {
   const [opened, setOpened] = useState(false);
 
   return (
@@ -50,6 +65,9 @@ export function InvitationShell({ guestName }: InvitationShellProps) {
         {opened ? (
           <>
             <MusicToggle />
+            {inviteUrl ? (
+              <QrSection guestName={guestName} inviteUrl={inviteUrl} />
+            ) : null}
             <CoupleSection />
             <VerseSection />
             <ParentsSection />
@@ -65,11 +83,20 @@ export function InvitationShell({ guestName }: InvitationShellProps) {
             <StaySection />
             <LiveStreamSection />
             <InstagramSection />
-            <RsvpSection guestName={guestName} />
+            <RsvpSection
+              guestName={guestName}
+              guestToken={guestToken}
+              rsvpStatus={rsvpStatus}
+              rsvpCount={rsvpCount}
+            />
             <GallerySection />
             <GiftSection />
             <FaqSection />
-            <CommentsSection guestName={guestName} />
+            <CommentsSection
+              guestName={guestName}
+              guestToken={guestToken}
+              comments={comments}
+            />
             <ClosingSection />
           </>
         ) : null}
