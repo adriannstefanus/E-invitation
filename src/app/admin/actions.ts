@@ -8,13 +8,16 @@ import {
   adminCookieOptions,
   createAdminSessionValue,
 } from "@/lib/admin-session";
+import { allocateDoorCodes, getGuestByDoorCode, getGuestById, getGuestByToken } from "@/lib/db";
+import { isDoorCodeQuery } from "@/lib/door-code";
 import { createGuestToken, parseInviteToken } from "@/lib/guest-token";
 import { createServiceClient } from "@/lib/supabase";
-import { GUEST_TYPES, type GiftKind, type GuestType } from "@/lib/types";
-
-function isGuestType(value: string): value is GuestType {
-  return (GUEST_TYPES as readonly string[]).includes(value);
-}
+import {
+  isGuestType,
+  isRsvpStatus,
+  parseInviteEvent,
+  type GiftKind,
+} from "@/lib/types";
 
 export async function loginAdmin(formData: FormData) {
   const password = String(formData.get("password") ?? "");
@@ -36,7 +39,9 @@ export async function logoutAdmin() {
 
 export async function createGuest(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
+  const inviteName = String(formData.get("invite_name") ?? "").trim() || null;
   const guestType = String(formData.get("guest_type") ?? "regular");
+  const invitedTo = parseInviteEvent(String(formData.get("invited_to") ?? ""));
   const invitedCount = Math.max(1, Number(formData.get("invited_count") ?? 1));
   const phone = String(formData.get("phone") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
@@ -45,12 +50,17 @@ export async function createGuest(formData: FormData) {
     return;
   }
 
+  const [doorCode] = await allocateDoorCodes(1);
+
   const { data, error } = await createServiceClient()
     .from("guests")
     .insert({
       name,
+      invite_name: inviteName,
       token: createGuestToken(),
+      door_code: doorCode,
       guest_type: guestType,
+      invited_to: invitedTo,
       invited_count: invitedCount,
       phone,
       notes,
@@ -70,7 +80,9 @@ export async function createGuest(formData: FormData) {
 export async function updateGuest(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
+  const inviteName = String(formData.get("invite_name") ?? "").trim() || null;
   const guestType = String(formData.get("guest_type") ?? "regular");
+  const invitedTo = parseInviteEvent(String(formData.get("invited_to") ?? ""));
   const invitedCount = Math.max(1, Number(formData.get("invited_count") ?? 1));
   const phone = String(formData.get("phone") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
@@ -83,7 +95,9 @@ export async function updateGuest(formData: FormData) {
     .from("guests")
     .update({
       name,
+      invite_name: inviteName,
       guest_type: guestType,
+      invited_to: invitedTo,
       invited_count: invitedCount,
       phone,
       notes,
@@ -94,6 +108,41 @@ export async function updateGuest(formData: FormData) {
   revalidatePath("/admin/guests");
   revalidatePath(`/admin/guests/${id}`);
   redirect(`/admin/guests/${id}?saved=1`);
+}
+
+export async function setGuestRsvp(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const status = String(formData.get("rsvp_status") ?? "");
+  if (!id || !isRsvpStatus(status)) {
+    return;
+  }
+
+  const countRaw = Number(formData.get("rsvp_count") ?? 0);
+  const patch =
+    status === "pending"
+      ? { rsvp_status: "pending", rsvp_count: null, rsvp_at: null }
+      : status === "no"
+        ? {
+            rsvp_status: "no",
+            rsvp_count: 0,
+            rsvp_at: new Date().toISOString(),
+          }
+        : {
+            rsvp_status: "yes",
+            rsvp_count: Math.max(1, countRaw || 1),
+            rsvp_at: new Date().toISOString(),
+          };
+
+  await createServiceClient().from("guests").update(patch).eq("id", id);
+  const token = String(formData.get("token") ?? "");
+  revalidatePath("/admin");
+  revalidatePath("/admin/guests");
+  revalidatePath("/admin/rsvp");
+  revalidatePath(`/admin/guests/${id}`);
+  if (token) {
+    revalidatePath(`/g/${token}`);
+  }
+  redirect(`/admin/guests/${id}?rsvp=1`);
 }
 
 export async function deleteGuest(formData: FormData) {
@@ -122,19 +171,34 @@ export async function importGuestsCsv(formData: FormData) {
     redirect("/admin/guests?import=empty");
   }
 
-  const start = lines[0].toLowerCase().includes("name") ? 1 : 0;
+  const headerCells = splitCsvLine(lines[0]).map((cell) => cell.toLowerCase());
+  const hasHeader = headerCells.includes("name");
+  const start = hasHeader ? 1 : 0;
   const rows = lines
     .slice(start)
     .map((line) => {
-      const [name, type, invited, phone] = line
-        .split(",")
-        .map((part) => part.trim());
+      const cells = splitCsvLine(line);
+      const name = csvCell(cells, headerCells, hasHeader, ["name"], 0);
+      const type = csvCell(cells, headerCells, hasHeader, ["type"], 1);
+      const invited = csvCell(
+        cells,
+        headerCells,
+        hasHeader,
+        ["invited_count"],
+        2,
+      );
+      const phone = csvCell(cells, headerCells, hasHeader, ["phone"], 3);
       return {
         name,
+        invite_name:
+          csvCell(cells, headerCells, hasHeader, ["invite_name"], -1) || null,
         token: createGuestToken(),
-        guest_type: isGuestType(type?.toLowerCase() ?? "")
+        guest_type: isGuestType(type.toLowerCase())
           ? type.toLowerCase()
           : "regular",
+        invited_to: parseInviteEvent(
+          csvCell(cells, headerCells, hasHeader, ["invited_to", "event"], -1),
+        ),
         invited_count: Math.max(1, Number(invited) || 1),
         phone: phone || null,
       };
@@ -142,7 +206,10 @@ export async function importGuestsCsv(formData: FormData) {
     .filter((row) => row.name);
 
   if (rows.length > 0) {
-    const { error } = await createServiceClient().from("guests").insert(rows);
+    const codes = await allocateDoorCodes(rows.length);
+    const { error } = await createServiceClient()
+      .from("guests")
+      .insert(rows.map((row, index) => ({ ...row, door_code: codes[index] })));
     if (error) {
       redirect("/admin/guests?import=error");
     }
@@ -153,23 +220,67 @@ export async function importGuestsCsv(formData: FormData) {
   redirect(`/admin/guests?imported=${rows.length}`);
 }
 
-export async function checkInGuest(formData: FormData) {
-  const token = parseInviteToken(String(formData.get("token") ?? "")) ?? "";
-  const method =
-    String(formData.get("method") ?? "manual") === "qr" ? "qr" : "manual";
-  const arrived = Math.max(1, Number(formData.get("arrived_count") ?? 1));
+function splitCsvLine(line: string) {
+  return line.split(",").map((part) => part.trim());
+}
 
-  if (!token) {
-    return { ok: false as const, error: "Could not read a guest token." };
+function csvCell(
+  cells: string[],
+  header: string[],
+  hasHeader: boolean,
+  names: string[],
+  fallbackIndex: number,
+) {
+  if (hasHeader) {
+    for (const name of names) {
+      const index = header.indexOf(name);
+      if (index >= 0) {
+        return cells[index] ?? "";
+      }
+    }
+    return "";
+  }
+  if (fallbackIndex < 0) {
+    return "";
+  }
+  return cells[fallbackIndex] ?? "";
+}
+
+export async function lookupDoorGuest(query: string) {
+  const raw = query.trim();
+  if (!raw) {
+    return { ok: false as const, error: "Enter a door code or scan a QR." };
   }
 
-  const { data: guest, error: lookupError } = await createServiceClient()
-    .from("guests")
-    .select("*")
-    .eq("token", token)
-    .maybeSingle();
+  const guest = isDoorCodeQuery(raw)
+    ? await getGuestByDoorCode(raw)
+    : await getGuestByToken(parseInviteToken(raw) ?? raw);
 
-  if (lookupError || !guest) {
+  if (!guest) {
+    return { ok: false as const, error: "Guest not found." };
+  }
+
+  return { ok: true as const, guest };
+}
+
+export async function checkInGuest(formData: FormData) {
+  const id = String(formData.get("id") ?? "").trim();
+  const doorCode = String(formData.get("door_code") ?? "").trim();
+  const tokenRaw = String(formData.get("token") ?? "").trim();
+  const method =
+    String(formData.get("method") ?? "manual") === "qr" ? "qr" : "manual";
+  const arrivedRaw = String(formData.get("arrived_count") ?? "").trim();
+
+  let guest = id ? await getGuestById(id) : null;
+  if (!guest && isDoorCodeQuery(doorCode || tokenRaw)) {
+    guest = await getGuestByDoorCode(doorCode || tokenRaw);
+  }
+  if (!guest && tokenRaw) {
+    const token = parseInviteToken(tokenRaw) ?? tokenRaw;
+    guest = await getGuestByToken(token);
+  }
+
+  if (!guest) {
     return { ok: false as const, error: "Guest not found." };
   }
 
@@ -177,21 +288,27 @@ export async function checkInGuest(formData: FormData) {
     return {
       ok: true as const,
       already: true,
-      name: guest.name as string,
-      type: guest.guest_type as string,
+      name: guest.name,
+      type: guest.guest_type,
     };
   }
 
-  const arrivedCount =
+  const defaultCount =
     guest.rsvp_count && guest.rsvp_count > 0
       ? guest.rsvp_count
       : guest.invited_count;
+  const arrivedCount = arrivedRaw
+    ? Math.min(
+        guest.invited_count,
+        Math.max(1, Number(arrivedRaw) || 1),
+      )
+    : defaultCount;
 
   const { error } = await createServiceClient()
     .from("guests")
     .update({
       checked_in_at: new Date().toISOString(),
-      arrived_count: method === "manual" ? arrived : arrivedCount,
+      arrived_count: arrivedCount,
       check_in_method: method,
     })
     .eq("id", guest.id);
@@ -207,8 +324,8 @@ export async function checkInGuest(formData: FormData) {
   return {
     ok: true as const,
     already: false,
-    name: guest.name as string,
-    type: guest.guest_type as string,
+    name: guest.name,
+    type: guest.guest_type,
   };
 }
 

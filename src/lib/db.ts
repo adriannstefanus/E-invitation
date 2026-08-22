@@ -1,9 +1,11 @@
+import { createDoorCode } from "@/lib/door-code";
 import { createServiceClient } from "@/lib/supabase";
 import type {
   Gift,
   GuestbookComment,
   Guest,
   GuestType,
+  InviteEvent,
   RsvpStatus,
 } from "@/lib/types";
 
@@ -35,9 +37,53 @@ export async function getGuestById(id: string) {
   return (data as Guest | null) ?? null;
 }
 
+export async function getGuestByDoorCode(code: string) {
+  const { data, error } = await createServiceClient()
+    .from("guests")
+    .select("*")
+    .eq("door_code", code.trim())
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as Guest | null) ?? null;
+}
+
+export async function allocateDoorCodes(count: number) {
+  const { data, error } = await createServiceClient()
+    .from("guests")
+    .select("door_code");
+  if (error) {
+    throw error;
+  }
+
+  const used = new Set(
+    (data ?? [])
+      .map((row) => row.door_code as string | null)
+      .filter((value): value is string => Boolean(value)),
+  );
+  const codes: string[] = [];
+  let attempts = 0;
+  while (codes.length < count && attempts < Math.max(50, count * 40)) {
+    attempts += 1;
+    const code = createDoorCode();
+    if (!used.has(code)) {
+      used.add(code);
+      codes.push(code);
+    }
+  }
+  if (codes.length < count) {
+    throw new Error("Could not allocate unique door codes.");
+  }
+  return codes;
+}
+
 export async function listGuests(query?: {
   search?: string;
   guestType?: GuestType | "all";
+  invitedTo?: InviteEvent | "all";
   rsvpStatus?: RsvpStatus | "all";
   attendance?: "all" | "arrived" | "waiting";
 }) {
@@ -45,10 +91,15 @@ export async function listGuests(query?: {
 
   const search = query?.search?.replace(/[%_,]/g, "").trim();
   if (search) {
-    request = request.or(`name.ilike.%${search}%,phone.ilike.%${search}%`);
+    request = request.or(
+      `name.ilike.%${search}%,invite_name.ilike.%${search}%,phone.ilike.%${search}%,door_code.eq.${search}`,
+    );
   }
   if (query?.guestType && query.guestType !== "all") {
     request = request.eq("guest_type", query.guestType);
+  }
+  if (query?.invitedTo && query.invitedTo !== "all") {
+    request = request.eq("invited_to", query.invitedTo);
   }
   if (query?.rsvpStatus && query.rsvpStatus !== "all") {
     request = request.eq("rsvp_status", query.rsvpStatus);

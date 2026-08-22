@@ -1,15 +1,21 @@
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { events } from "@/data/content";
+import { eventsForInvite } from "@/data/content";
 import { invitationMedia } from "@/data/media";
+import type { InviteEvent } from "@/lib/types";
 
-export function EventsSection() {
+export function EventsSection({
+  invitedTo = "both",
+}: {
+  invitedTo?: InviteEvent;
+}) {
+  const visible = eventsForInvite(invitedTo);
   return (
     <InvitationSection image={invitationMedia.events.background} mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">
         Event details
       </p>
       <div className="mt-6 w-full space-y-3">
-        {events.map((event) => (
+        {visible.map((event) => (
           <article
             key={event.title}
             className="rounded-2xl border border-line bg-card/90 px-5 py-5 text-center"

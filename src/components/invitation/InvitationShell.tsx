@@ -28,7 +28,7 @@ import { StaySection } from "@/components/invitation/StaySection";
 import { VerseSection } from "@/components/invitation/VerseSection";
 import { WeddingPartySection } from "@/components/invitation/WeddingPartySection";
 
-import type { GuestbookComment, RsvpStatus } from "@/lib/types";
+import type { GuestbookComment, InviteEvent, RsvpStatus } from "@/lib/types";
 
 type InvitationShellProps = {
   guestName: string;
@@ -36,6 +36,8 @@ type InvitationShellProps = {
   inviteUrl?: string;
   rsvpStatus?: RsvpStatus;
   rsvpCount?: number | null;
+  invitedTo?: InviteEvent;
+  doorCode?: string;
   comments?: Pick<GuestbookComment, "id" | "name" | "message">[];
 };
 
@@ -45,6 +47,8 @@ export function InvitationShell({
   inviteUrl,
   rsvpStatus = "pending",
   rsvpCount,
+  invitedTo = "both",
+  doorCode,
   comments = [],
 }: InvitationShellProps) {
   const [opened, setOpened] = useState(false);
@@ -66,7 +70,11 @@ export function InvitationShell({
           <>
             <MusicToggle />
             {inviteUrl ? (
-              <QrSection guestName={guestName} inviteUrl={inviteUrl} />
+              <QrSection
+                guestName={guestName}
+                inviteUrl={inviteUrl}
+                doorCode={doorCode}
+              />
             ) : null}
             <CoupleSection />
             <VerseSection />
@@ -76,8 +84,8 @@ export function InvitationShell({
             <GroomDetailSection />
             <LoveStorySection />
             <WeddingPartySection />
-            <EventsSection />
-            <LocationSection />
+            <EventsSection invitedTo={invitedTo} />
+            <LocationSection invitedTo={invitedTo} />
             <RundownSection />
             <DressCodeSection />
             <StaySection />

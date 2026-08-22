@@ -19,13 +19,16 @@ export async function GET() {
   const guests = await listGuests();
   const header = [
     "name",
+    "invite_name",
     "type",
+    "invited_to",
     "invited_count",
     "phone",
     "notes",
     "rsvp_status",
     "rsvp_count",
     "checked_in",
+    "door_code",
     "token",
   ];
   const lines = [
@@ -33,13 +36,16 @@ export async function GET() {
     ...guests.map((guest) =>
       [
         csvCell(guest.name),
+        csvCell(guest.invite_name),
         csvCell(guest.guest_type),
+        csvCell(guest.invited_to),
         csvCell(guest.invited_count),
         csvCell(guest.phone),
         csvCell(guest.notes),
         csvCell(guest.rsvp_status),
         csvCell(guest.rsvp_count),
         csvCell(guest.checked_in_at ? "yes" : "no"),
+        csvCell(guest.door_code),
         csvCell(guest.token),
       ].join(","),
     ),

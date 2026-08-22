@@ -5,10 +5,14 @@ import { AdminShell, SetupNotice, TypeBadge } from "@/components/admin/AdminUi";
 import { listGuests } from "@/lib/db";
 import { getSiteOrigin } from "@/lib/invite-url";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { getWhatsAppInviteUrl } from "@/lib/whatsapp";
 import {
   GUEST_TYPES,
+  INVITE_EVENT_LABELS,
+  INVITE_EVENTS,
   RSVP_STATUSES,
   type GuestType,
+  type InviteEvent,
   type RsvpStatus,
 } from "@/lib/types";
 
@@ -17,6 +21,7 @@ type GuestsPageProps = {
     q?: string;
     type?: string;
     rsvp?: string;
+    event?: string;
     door?: string;
     imported?: string;
     import?: string;
@@ -40,6 +45,11 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
   )
     ? (params.rsvp as RsvpStatus)
     : "all";
+  const invitedTo = (INVITE_EVENTS as readonly string[]).includes(
+    params.event ?? "",
+  )
+    ? (params.event as InviteEvent)
+    : "all";
   const attendance =
     params.door === "arrived" || params.door === "waiting"
       ? params.door
@@ -49,6 +59,7 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
     listGuests({
       search: params.q,
       guestType,
+      invitedTo,
       rsvpStatus,
       attendance,
     }),
@@ -82,9 +93,16 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
           The CSV was empty.
         </p>
       ) : null}
-      {params.import === "error" || params.error === "create" ? (
+      {params.import === "error" ? (
         <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          Could not save guests. Check the file and try again.
+          Could not import the CSV. Check the file and try again.
+        </p>
+      ) : null}
+      {params.error === "create" ? (
+        <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          Could not save the guest. Use the Supabase secret key for
+          SUPABASE_SERVICE_ROLE_KEY (not the publishable/anon key), then
+          restart or redeploy.
         </p>
       ) : null}
 
@@ -116,6 +134,18 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
           {RSVP_STATUSES.map((status) => (
             <option key={status} value={status}>
               {status}
+            </option>
+          ))}
+        </select>
+        <select
+          name="event"
+          defaultValue={invitedTo}
+          className="rounded-md border border-zinc-300 px-3 py-2 text-sm"
+        >
+          <option value="all">All events</option>
+          {INVITE_EVENTS.map((value) => (
+            <option key={value} value={value}>
+              {INVITE_EVENT_LABELS[value]}
             </option>
           ))}
         </select>
@@ -159,6 +189,7 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
               <tr>
                 <th className="px-3 py-2 font-medium">Name</th>
                 <th className="px-3 py-2 font-medium">Type</th>
+                <th className="px-3 py-2 font-medium">Event</th>
                 <th className="px-3 py-2 font-medium">Party</th>
                 <th className="px-3 py-2 font-medium">Phone</th>
                 <th className="px-3 py-2 font-medium">RSVP</th>
@@ -179,6 +210,11 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
                     >
                       {guest.name}
                     </Link>
+                    {guest.invite_name ? (
+                      <p className="max-w-48 truncate text-xs text-zinc-400">
+                        Invite: {guest.invite_name}
+                      </p>
+                    ) : null}
                     {guest.notes ? (
                       <p className="max-w-48 truncate text-xs text-zinc-400">
                         {guest.notes}
@@ -187,6 +223,9 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
                   </td>
                   <td className="px-3 py-2">
                     <TypeBadge type={guest.guest_type} />
+                  </td>
+                  <td className="px-3 py-2">
+                    {INVITE_EVENT_LABELS[guest.invited_to]}
                   </td>
                   <td className="px-3 py-2">{guest.invited_count}</td>
                   <td className="px-3 py-2 text-zinc-600">
@@ -200,7 +239,17 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
                     {guest.checked_in_at ? "Arrived" : "Waiting"}
                   </td>
                   <td className="px-3 py-2">
-                    <CopyText value={inviteById[guest.id]} label="Copy link" />
+                    <div className="flex flex-wrap gap-2">
+                      <CopyText value={inviteById[guest.id]} label="Copy link" />
+                      <a
+                        href={getWhatsAppInviteUrl(guest, inviteById[guest.id])}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50"
+                      >
+                        WhatsApp
+                      </a>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -225,6 +274,14 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
               />
             </label>
             <label className="block text-sm">
+              Name on the invite
+              <input
+                name="invite_name"
+                placeholder="Leave blank to use full name"
+                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2"
+              />
+            </label>
+            <label className="block text-sm">
               Type
               <select
                 name="guest_type"
@@ -233,6 +290,20 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
                 {GUEST_TYPES.map((type) => (
                   <option key={type} value={type}>
                     {type}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm">
+              Invited to
+              <select
+                name="invited_to"
+                defaultValue="both"
+                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2"
+              >
+                {INVITE_EVENTS.map((value) => (
+                  <option key={value} value={value}>
+                    {INVITE_EVENT_LABELS[value]}
                   </option>
                 ))}
               </select>
@@ -274,8 +345,9 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
         >
           <h2 className="font-medium">CSV import</h2>
           <p className="mt-2 text-sm text-zinc-500">
-            Columns: name, type, invited_count, phone. Type can be regular,
-            vip, family, or vendor.
+            Columns: name, invite_name, type, invited_to, invited_count, phone.
+            Type can be regular, vip, family, or vendor. Event can be both,
+            ceremony, or reception.
           </p>
           <input
             name="file"

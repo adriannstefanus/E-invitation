@@ -57,6 +57,7 @@ export const weddingParty = [
 
 export const events = [
   {
+    id: "ceremony" as const,
     title: "Ceremony",
     time: "TBD",
     place: "Venue placeholder",
@@ -64,6 +65,7 @@ export const events = [
     wazeUrl: "https://waze.com/ul?q=Jakarta",
   },
   {
+    id: "reception" as const,
     title: "Reception",
     time: "TBD",
     place: "Venue placeholder",
@@ -71,6 +73,13 @@ export const events = [
     wazeUrl: "https://waze.com/ul?q=Jakarta",
   },
 ] as const;
+
+export function eventsForInvite(invitedTo: "both" | "ceremony" | "reception") {
+  if (invitedTo === "both") {
+    return events;
+  }
+  return events.filter((event) => event.id === invitedTo);
+}
 
 export const rundown = [
   { time: "08:00", title: "Guest arrival" },

@@ -15,17 +15,27 @@ const links = [
 export function AdminShell({
   title,
   children,
+  compact = false,
 }: {
   title: string;
   children: ReactNode;
+  compact?: boolean;
 }) {
+  const nav = compact
+    ? links.filter((link) => link.href === "/admin" || link.href === "/admin/door")
+    : links;
+
   return (
     <div className="min-h-dvh bg-zinc-100 text-zinc-900">
       <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
+        <div
+          className={`mx-auto flex flex-wrap items-center gap-3 px-4 py-3 ${
+            compact ? "max-w-3xl" : "max-w-5xl"
+          }`}
+        >
           <p className="mr-2 text-sm font-medium">Admin</p>
           <nav className="flex flex-wrap gap-2 text-sm">
-            {links.map((link) => (
+            {nav.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -38,15 +48,23 @@ export function AdminShell({
           <form action={logoutAdmin} className="ml-auto">
             <button
               type="submit"
-              className="text-sm text-zinc-500 hover:text-zinc-900"
+              className="min-h-10 text-sm text-zinc-500 hover:text-zinc-900"
             >
               Log out
             </button>
           </form>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-6">
-        <h1 className="mb-6 text-2xl font-semibold tracking-tight">{title}</h1>
+      <main
+        className={`mx-auto px-4 py-6 ${compact ? "max-w-3xl" : "max-w-5xl"}`}
+      >
+        <h1
+          className={`mb-6 font-semibold tracking-tight ${
+            compact ? "text-3xl" : "text-2xl"
+          }`}
+        >
+          {title}
+        </h1>
         {children}
       </main>
     </div>

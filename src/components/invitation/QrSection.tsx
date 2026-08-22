@@ -4,13 +4,15 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { InvitationSection } from "@/components/invitation/InvitationSection";
 import { invitationMedia } from "@/data/media";
+import { formatDoorCode } from "@/lib/door-code-format";
 
 type QrSectionProps = {
   guestName: string;
   inviteUrl: string;
+  doorCode?: string;
 };
 
-export function QrSection({ guestName, inviteUrl }: QrSectionProps) {
+export function QrSection({ guestName, inviteUrl, doorCode }: QrSectionProps) {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -36,7 +38,8 @@ export function QrSection({ guestName, inviteUrl }: QrSectionProps) {
       </p>
       <h2 className="font-display mt-3 text-3xl">Your QR</h2>
       <p className="mt-2 max-w-xs text-sm text-muted">
-        Show this at the door, {guestName}.
+        Show this at the door, {guestName}. If the camera cannot read it, tell
+        them the door code.
       </p>
       <div className="mt-6 rounded-2xl border border-line bg-card p-4">
         {dataUrl ? (
@@ -50,6 +53,16 @@ export function QrSection({ guestName, inviteUrl }: QrSectionProps) {
           <div className="h-52 w-52 bg-card" />
         )}
       </div>
+      {doorCode ? (
+        <p className="mt-5 text-center">
+          <span className="block text-xs tracking-[0.3em] text-muted uppercase">
+            Door code
+          </span>
+          <span className="font-display mt-1 block text-4xl tracking-[0.2em]">
+            {formatDoorCode(doorCode)}
+          </span>
+        </p>
+      ) : null}
     </InvitationSection>
   );
 }

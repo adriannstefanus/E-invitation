@@ -4,12 +4,16 @@ create type guest_type as enum ('regular', 'vip', 'family', 'vendor');
 create type rsvp_status as enum ('pending', 'yes', 'no');
 create type check_in_method as enum ('qr', 'manual');
 create type gift_kind as enum ('angpao', 'physical');
+create type invite_event as enum ('both', 'ceremony', 'reception');
 
 create table guests (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  invite_name text,
   token text not null unique,
   guest_type guest_type not null default 'regular',
+  invited_to invite_event not null default 'both',
+  door_code text not null unique,
   invited_count integer not null default 1 check (invited_count >= 1),
   phone text,
   notes text,
