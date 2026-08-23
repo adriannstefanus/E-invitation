@@ -165,8 +165,35 @@ function CopyForm({ settings }: { settings: SiteSettings }) {
           />
         </fieldset>
 
-        <fieldset className="grid gap-3 sm:grid-cols-2">
-          <legend className="text-sm font-medium">Parents</legend>
+        <fieldset className="space-y-3">
+          <legend className="text-sm font-medium">Parents / families</legend>
+          <label className="block text-sm">
+            Small label
+            <input
+              value={copy.families.label}
+              onChange={(event) =>
+                setCopy((current) => ({
+                  ...current,
+                  families: { ...current.families, label: event.target.value },
+                }))
+              }
+              className={fieldClass}
+            />
+          </label>
+          <label className="block text-sm">
+            Heading
+            <input
+              value={copy.families.heading}
+              onChange={(event) =>
+                setCopy((current) => ({
+                  ...current,
+                  families: { ...current.families, heading: event.target.value },
+                }))
+              }
+              className={fieldClass}
+            />
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-sm">
             Groom family title
             <input
@@ -243,6 +270,7 @@ function CopyForm({ settings }: { settings: SiteSettings }) {
               className={fieldClass}
             />
           </label>
+          </div>
         </fieldset>
 
         <ListEditor

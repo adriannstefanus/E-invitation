@@ -94,6 +94,8 @@ export type InviteCopy = {
   coverGreeting: string;
   verse: { label: string; text: string; source: string };
   families: {
+    label: string;
+    heading: string;
     bride: { title: string; names: string };
     groom: { title: string; names: string };
   };
@@ -241,6 +243,8 @@ export const defaultSiteSettings: SiteSettings = {
     coverGreeting: "you are invited to celebrate with us.",
     verse: { ...verse },
     families: {
+      label: "With their families",
+      heading: "Turut mengundang",
       bride: { ...families.bride },
       groom: { ...families.groom },
     },
@@ -342,6 +346,8 @@ function mergeCopy(raw: Partial<InviteCopy> | undefined): InviteCopy {
       copy.coverGreeting ?? defaultSiteSettings.copy.coverGreeting,
     verse: { ...defaultSiteSettings.copy.verse, ...copy.verse },
     families: {
+      ...defaultSiteSettings.copy.families,
+      ...copy.families,
       bride: {
         ...defaultSiteSettings.copy.families.bride,
         ...copy.families?.bride,

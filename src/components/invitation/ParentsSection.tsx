@@ -10,9 +10,9 @@ export function ParentsSection({
   return (
     <InvitationSection image={invitationMedia.parents.background} mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">
-        With their families
+        {families.label}
       </p>
-      <h2 className="font-display mt-3 text-3xl">Turut mengundang</h2>
+      <h2 className="font-display mt-3 text-3xl">{families.heading}</h2>
       <div className="mt-8 w-full space-y-4">
         <FamilyCard family={families.groom} />
         <FamilyCard family={families.bride} />
