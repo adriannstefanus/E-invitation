@@ -1,24 +1,40 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { saveInvitationSettings } from "@/app/admin/actions";
+import {
+  Group,
+  ItemHeading,
+  LaterItems,
+  StatusBadge,
+  fieldClass,
+} from "@/components/admin/InvitationChrome";
+import {
+  DangerGroup,
+  GoLiveGroup,
+  InviteCopyGroup,
+} from "@/components/admin/InvitationNext";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import {
+  CUSTOM_THEME_TOKENS,
+  CUSTOM_THEME_TOKEN_LABELS,
   THEME_IDS,
   THEME_PRESETS,
+  THEME_PRESET_COLORS,
   dateInputValue,
+  themeTokenValue,
   timeInputValue,
   type BankAccount,
+  type CustomThemeToken,
   type DressColor,
   type FaqItem,
   type GuestTypeStyle,
   type SiteSettings,
+  type ThemeColorOverrides,
+  type ThemeId,
   type WhatsAppTemplate,
 } from "@/lib/site-settings";
 import { GUEST_TYPES, type GuestType } from "@/lib/types";
-
-const fieldClass =
-  "mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm";
 
 const MODULES = [
   {
@@ -29,14 +45,12 @@ const MODULES = [
   {
     href: "#look",
     title: "Look",
-    live: ["Theme presets"],
-    later: ["Custom colors"],
+    live: ["Theme presets", "Custom colors"],
   },
   {
     href: "#messages",
     title: "WhatsApp",
-    live: ["Templates, pick one when sending"],
-    later: ["Invite-sent tracker"],
+    live: ["Templates, pick one when sending", "Invite-sent tracker"],
   },
   {
     href: "#banks",
@@ -57,28 +71,23 @@ const MODULES = [
   {
     href: "#copy",
     title: "Invite copy",
-    later: [
+    live: [
       "Cover greeting",
       "Show or hide sections",
       "Verse, parents, story, rundown, party",
-      "English / Indonesian",
       "Music URL",
-      "Photo and video upload",
     ],
+    later: ["English / Indonesian", "Photo and video upload"],
   },
   {
     href: "#go-live",
     title: "Go live",
-    later: [
-      "Invite preview",
-      "Publish / unpublish",
-      "RSVP window",
-    ],
+    live: ["Invite preview", "Publish / unpublish", "RSVP window"],
   },
   {
     href: "#tools",
     title: "Danger zone",
-    later: [
+    live: [
       "Reset check-ins",
       "Reset guestbook",
       "Reset gifts",
@@ -102,49 +111,9 @@ export function InvitationSettings({ settings }: { settings: SiteSettings }) {
       <BanksForm settings={settings} />
       <GuideGroup settings={settings} />
       <GuestTypesForm settings={settings} />
-      <Group id="copy" title="Invite copy" status="stub">
-        <LaterItems
-          items={[
-            "Cover greeting",
-            "Show or hide sections",
-            "Verse, parents, love story, rundown, party",
-            "English / Indonesian for the whole invite",
-            "Music URL",
-            "Photo and video upload",
-          ]}
-        />
-      </Group>
-      <Group id="go-live" title="Go live" status="stub">
-        <LaterItems
-          items={[
-            "Invite preview from admin",
-            "Publish / unpublish",
-          ]}
-        />
-        <div className="mt-4">
-          <ItemHeading status="stub">RSVP open and close dates</ItemHeading>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-sm text-zinc-500">
-              Opens
-              <input type="date" disabled className={`${fieldClass} bg-zinc-100`} />
-            </label>
-            <label className="block text-sm text-zinc-500">
-              Closes
-              <input type="date" disabled className={`${fieldClass} bg-zinc-100`} />
-            </label>
-          </div>
-        </div>
-      </Group>
-      <Group id="tools" title="Danger zone" status="stub">
-        <LaterItems
-          items={[
-            "Reset check-ins",
-            "Reset guestbook",
-            "Reset gifts",
-            "Wipe all guests",
-          ]}
-        />
-      </Group>
+      <InviteCopyGroup settings={settings} />
+      <GoLiveGroup settings={settings} />
+      <DangerGroup />
     </div>
   );
 }
@@ -201,89 +170,6 @@ function ModuleItemList({
         >
           <span>{item}</span>
           <StatusBadge status={status} />
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function StatusBadge({ status }: { status: "live" | "stub" | "mixed" }) {
-  const label =
-    status === "live" ? "Live" : status === "stub" ? "Stub" : "Live + stub";
-  const className =
-    status === "live"
-      ? "bg-emerald-50 text-emerald-800"
-      : status === "stub"
-        ? "bg-amber-50 text-amber-800"
-        : "bg-zinc-100 text-zinc-600";
-  return (
-    <span
-      className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${className}`}
-    >
-      {label}
-    </span>
-  );
-}
-
-function Group({
-  id,
-  title,
-  status = "live",
-  children,
-}: {
-  id: string;
-  title: string;
-  status?: "live" | "stub" | "mixed";
-  children: ReactNode;
-}) {
-  return (
-    <section
-      id={id}
-      className={`scroll-mt-6 rounded-2xl border p-5 ${
-        status === "stub"
-          ? "border-dashed border-zinc-300 bg-zinc-50"
-          : "border-zinc-200 bg-white"
-      }`}
-    >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">{title}</h2>
-        <StatusBadge status={status} />
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function ItemHeading({
-  children,
-  status = "live",
-}: {
-  children: string;
-  status?: "live" | "stub";
-}) {
-  return (
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-      <h3 className="text-sm font-medium text-zinc-800">{children}</h3>
-      <StatusBadge status={status} />
-    </div>
-  );
-}
-
-function LaterItems({ items }: { items: string[] }) {
-  return (
-    <ul className="space-y-2 text-sm text-zinc-600">
-      {items.map((item) => (
-        <li
-          key={item}
-          className="flex items-start justify-between gap-3 rounded-lg border border-dashed border-amber-200 bg-amber-50/60 px-3 py-2"
-        >
-          <span>
-            {item}
-            <span className="mt-0.5 block text-xs text-amber-800/80">
-              Not built yet
-            </span>
-          </span>
-          <StatusBadge status="stub" />
         </li>
       ))}
     </ul>
@@ -376,39 +262,93 @@ function CoupleForm({ settings }: { settings: SiteSettings }) {
 }
 
 function ThemeForm({ settings }: { settings: SiteSettings }) {
+  const [theme, setTheme] = useState<ThemeId>(settings.theme);
+  const [colors, setColors] = useState<ThemeColorOverrides>(
+    settings.colors ?? {},
+  );
+  const hasOverrides = CUSTOM_THEME_TOKENS.some((token) => colors[token]);
+
+  function selectTheme(next: ThemeId) {
+    setTheme(next);
+    setColors({});
+  }
+
+  function setToken(token: CustomThemeToken, value: string) {
+    const preset = THEME_PRESET_COLORS[theme][token];
+    setColors((current) => {
+      if (value.toLowerCase() === preset) {
+        const next = { ...current };
+        delete next[token];
+        return next;
+      }
+      return { ...current, [token]: value.toLowerCase() };
+    });
+  }
+
   return (
-    <Group id="look" title="Look" status="mixed">
-      <ItemHeading>Theme presets</ItemHeading>
-      <form action={saveInvitationSettings} className="space-y-3">
+    <Group id="look" title="Look">
+      <form action={saveInvitationSettings} className="space-y-6">
         <input type="hidden" name="section" value="theme" />
-        <p className="text-sm text-zinc-600">
-          Palette only. Layout and photos stay the same. Admin stays zinc.
-        </p>
-        <div className="grid gap-2 sm:grid-cols-5">
-          {THEME_IDS.map((id) => (
-            <label
-              key={id}
-              className="flex cursor-pointer flex-col rounded-xl border border-zinc-200 p-3 text-sm has-[:checked]:border-zinc-900 has-[:checked]:ring-1 has-[:checked]:ring-zinc-900"
+        <input type="hidden" name="theme" value={theme} />
+        <input type="hidden" name="payload" value={JSON.stringify(colors)} />
+        <div>
+          <ItemHeading>Theme presets</ItemHeading>
+          <p className="mb-3 text-sm text-zinc-600">
+            Palette only. Layout and photos stay the same. Admin stays zinc.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-5">
+            {THEME_IDS.map((id) => (
+              <label
+                key={id}
+                className="flex cursor-pointer flex-col rounded-xl border border-zinc-200 p-3 text-sm has-[:checked]:border-zinc-900 has-[:checked]:ring-1 has-[:checked]:ring-zinc-900"
+              >
+                <input
+                  type="radio"
+                  name="themeChoice"
+                  value={id}
+                  checked={theme === id}
+                  onChange={() => selectTheme(id)}
+                  className="sr-only"
+                />
+                <span className="font-medium">{THEME_PRESETS[id].label}</span>
+                <span className="text-xs text-zinc-500">
+                  {THEME_PRESETS[id].hint}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div>
+          <ItemHeading>Custom colors</ItemHeading>
+          <p className="mb-3 text-sm text-zinc-600">
+            Optional. Leave a picker on the preset value to keep that token.
+            Changing preset clears these.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {CUSTOM_THEME_TOKENS.map((token) => (
+              <label key={token} className="block text-sm">
+                {CUSTOM_THEME_TOKEN_LABELS[token]}
+                <input
+                  type="color"
+                  value={themeTokenValue(theme, colors, token)}
+                  onChange={(event) => setToken(token, event.target.value)}
+                  className="mt-1 block h-10 w-full rounded border border-zinc-300"
+                />
+              </label>
+            ))}
+          </div>
+          {hasOverrides ? (
+            <button
+              type="button"
+              onClick={() => setColors({})}
+              className="mt-3 text-sm text-zinc-600"
             >
-              <input
-                type="radio"
-                name="theme"
-                value={id}
-                defaultChecked={settings.theme === id}
-                className="sr-only"
-              />
-              <span className="font-medium">{THEME_PRESETS[id].label}</span>
-              <span className="text-xs text-zinc-500">
-                {THEME_PRESETS[id].hint}
-              </span>
-            </label>
-          ))}
+              Reset to preset
+            </button>
+          ) : null}
         </div>
         <SaveButton />
       </form>
-      <div className="mt-4">
-        <LaterItems items={["Custom color pickers on top of these presets"]} />
-      </div>
     </Group>
   );
 }
@@ -506,7 +446,7 @@ function WhatsAppForm({ settings }: { settings: SiteSettings }) {
   );
 
   return (
-    <Group id="messages" title="WhatsApp" status="mixed">
+    <Group id="messages" title="WhatsApp">
       <ItemHeading>Templates</ItemHeading>
       <p className="mb-3 text-sm text-zinc-600">
         Staff pick one of these when they tap WhatsApp. Placeholders:{" "}
@@ -587,7 +527,10 @@ function WhatsAppForm({ settings }: { settings: SiteSettings }) {
         </div>
       </form>
       <div className="mt-4">
-        <LaterItems items={["Mark WhatsApp as sent per guest"]} />
+        <p className="mt-4 text-sm text-zinc-600">
+          After you pick a template, that guest is marked invite-sent. You can
+          also toggle it on the guest list.
+        </p>
       </div>
     </Group>
   );

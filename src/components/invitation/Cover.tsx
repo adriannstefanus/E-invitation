@@ -2,13 +2,14 @@
 
 import { InvitationSection } from "@/components/invitation/InvitationSection";
 import { invitationMedia } from "@/data/media";
-import { formatWeddingWhen } from "@/lib/site-settings";
+import { fillCoverGreeting, formatWeddingWhen } from "@/lib/site-settings";
 
 type CoverProps = {
   guestName: string;
   brideName: string;
   groomName: string;
   weddingAt?: string;
+  greeting: string;
   opened: boolean;
   onOpen: () => void;
 };
@@ -18,10 +19,12 @@ export function Cover({
   brideName,
   groomName,
   weddingAt,
+  greeting,
   opened,
   onOpen,
 }: CoverProps) {
   const when = weddingAt ? formatWeddingWhen(weddingAt) : null;
+  const line = fillCoverGreeting(greeting, guestName);
   return (
     <InvitationSection
       image={invitationMedia.cover.image}
@@ -42,7 +45,7 @@ export function Cover({
       <p className="mt-10 max-w-xs text-sm leading-relaxed text-muted">
         Dear {guestName},
         <br />
-        you are invited to celebrate with us.
+        {line}
       </p>
       {when ? (
         <p className="mt-4 text-xs tracking-wide text-muted">{when}</p>

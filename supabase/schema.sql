@@ -23,6 +23,7 @@ create table guests (
   checked_in_at timestamptz,
   arrived_count integer,
   check_in_method check_in_method,
+  invite_sent_at timestamptz,
   created_at timestamptz not null default now()
 );
 

@@ -1,9 +1,13 @@
 import { CopyButton } from "@/components/invitation/CopyButton";
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { instagram } from "@/data/content";
 import { invitationMedia } from "@/data/media";
+import type { InviteCopy } from "@/lib/site-settings";
 
-export function InstagramSection() {
+export function InstagramSection({
+  instagram,
+}: {
+  instagram: InviteCopy["instagram"];
+}) {
   return (
     <InvitationSection image={invitationMedia.instagram.background} mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">Share</p>
@@ -13,14 +17,16 @@ export function InstagramSection() {
       </p>
       <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
         <CopyButton value={instagram.hashtag} label="Copy hashtag" />
-        <a
-          href={instagram.filterUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex min-h-9 items-center rounded-full border border-line bg-card px-4 text-xs tracking-wide"
-        >
-          Open filter
-        </a>
+        {instagram.filterUrl ? (
+          <a
+            href={instagram.filterUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-9 items-center rounded-full border border-line bg-card px-4 text-xs tracking-wide"
+          >
+            Open filter
+          </a>
+        ) : null}
       </div>
     </InvitationSection>
   );

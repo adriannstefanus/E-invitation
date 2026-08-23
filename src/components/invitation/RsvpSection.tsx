@@ -6,6 +6,7 @@ import { InvitationSection } from "@/components/invitation/InvitationSection";
 import { useInviteBusy } from "@/components/invitation/InviteBusy";
 import { useToast } from "@/components/ui/Toast";
 import { invitationMedia } from "@/data/media";
+import { formatWeddingWhen, rsvpWindowState } from "@/lib/site-settings";
 import type { RsvpStatus } from "@/lib/types";
 
 type RsvpSectionProps = {
@@ -13,6 +14,8 @@ type RsvpSectionProps = {
   guestToken?: string;
   rsvpStatus?: RsvpStatus;
   rsvpCount?: number | null;
+  rsvpOpensAt?: string;
+  rsvpClosesAt?: string;
 };
 
 export function RsvpSection({
@@ -20,7 +23,10 @@ export function RsvpSection({
   guestToken,
   rsvpStatus = "pending",
   rsvpCount,
+  rsvpOpensAt = "",
+  rsvpClosesAt = "",
 }: RsvpSectionProps) {
+  const windowState = rsvpWindowState(rsvpOpensAt, rsvpClosesAt);
   const defaultName = guestName === "Guest" ? "" : guestName;
   const [name, setName] = useState(defaultName);
   const [attending, setAttending] = useState<"yes" | "no">(
@@ -60,7 +66,15 @@ export function RsvpSection({
     <InvitationSection image={invitationMedia.rsvp.background} mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">RSVP</p>
       <h2 className="font-display mt-3 text-3xl">Will you join us?</h2>
-      {!guestToken ? (
+      {windowState === "soon" ? (
+        <p className="mt-5 max-w-xs text-sm text-muted">
+          RSVP opens {formatWeddingWhen(rsvpOpensAt) ?? "soon"}.
+        </p>
+      ) : windowState === "closed" ? (
+        <p className="mt-5 max-w-xs text-sm text-muted">
+          RSVP closed{rsvpClosesAt ? ` ${formatWeddingWhen(rsvpClosesAt)}` : ""}.
+        </p>
+      ) : !guestToken ? (
         <p className="mt-5 max-w-xs text-sm text-muted">
           Open your personal invite link to send an RSVP.
         </p>

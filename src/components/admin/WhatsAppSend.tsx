@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { setInviteSent } from "@/app/admin/actions";
 import { fillWhatsAppTemplate, type WhatsAppTemplate } from "@/lib/site-settings";
 import { toWhatsAppPhone, whatsappSendUrl } from "@/lib/whatsapp";
 import type { Guest } from "@/lib/types";
@@ -20,6 +22,7 @@ export function WhatsAppSend({
 }: WhatsAppSendProps) {
   const phone = toWhatsAppPhone(guest.phone);
   const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   if (!phone || templates.length === 0) {
     return null;
@@ -49,7 +52,12 @@ export function WhatsAppSend({
                     href={href}
                     target="_blank"
                     rel="noreferrer"
-                    onClick={() => setOpen(false)}
+                    onClick={() => {
+                      setOpen(false);
+                      void setInviteSent(guest.id, true).then(() =>
+                        router.refresh(),
+                      );
+                    }}
                     className="block rounded-lg px-2 py-2 text-sm hover:bg-zinc-50"
                   >
                     <span className="font-medium">{template.name}</span>

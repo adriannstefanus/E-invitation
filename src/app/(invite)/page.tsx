@@ -1,3 +1,4 @@
+import { ComingSoon } from "@/components/invitation/ComingSoon";
 import { InvitationShell } from "@/components/invitation/InvitationShell";
 import { getSiteSettings, listComments } from "@/lib/db";
 import { readGuestName } from "@/lib/guest-name";
@@ -13,6 +14,9 @@ export default async function Home({ searchParams }: HomeProps) {
   const configured = isSupabaseConfigured();
   const comments = configured ? await listComments(12) : [];
   const settings = configured ? await getSiteSettings() : defaultSiteSettings;
+  if (!settings.published) {
+    return <ComingSoon settings={settings} />;
+  }
 
   return (
     <InvitationShell

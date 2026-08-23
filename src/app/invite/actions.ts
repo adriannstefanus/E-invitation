@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getGuestByToken } from "@/lib/db";
+import { getGuestByToken, getSiteSettings } from "@/lib/db";
+import { rsvpWindowState } from "@/lib/site-settings";
 import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase";
 
 export async function submitRsvp(formData: FormData) {
@@ -20,6 +21,18 @@ export async function submitRsvp(formData: FormData) {
   const guest = await getGuestByToken(token);
   if (!guest) {
     return { ok: false, error: "Guest not found." };
+  }
+
+  const settings = await getSiteSettings();
+  const windowState = rsvpWindowState(
+    settings.rsvpOpensAt,
+    settings.rsvpClosesAt,
+  );
+  if (windowState === "soon") {
+    return { ok: false, error: "RSVP is not open yet." };
+  }
+  if (windowState === "closed") {
+    return { ok: false, error: "RSVP is closed." };
   }
 
   const { error } = await createServiceClient()

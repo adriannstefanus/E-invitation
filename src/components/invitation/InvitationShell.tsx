@@ -29,7 +29,11 @@ import { StaySection } from "@/components/invitation/StaySection";
 import { VerseSection } from "@/components/invitation/VerseSection";
 import { WeddingPartySection } from "@/components/invitation/WeddingPartySection";
 import type { GuestbookComment, InviteEvent, RsvpStatus } from "@/lib/types";
-import type { SiteSettings } from "@/lib/site-settings";
+import {
+  inviteThemeStyle,
+  isSectionVisible,
+  type SiteSettings,
+} from "@/lib/site-settings";
 
 type InvitationShellProps = {
   guestName: string;
@@ -56,9 +60,16 @@ export function InvitationShell({
 }: InvitationShellProps) {
   const [opened, setOpened] = useState(false);
   const couple = settings.couple;
+  const copy = settings.copy;
+  const show = (id: Parameters<typeof isSectionVisible>[1]) =>
+    isSectionVisible(settings, id);
 
   return (
-    <div data-theme={settings.theme} className="h-dvh bg-[var(--chrome)]">
+    <div
+      data-theme={settings.theme}
+      className="h-dvh bg-[var(--chrome)]"
+      style={inviteThemeStyle(settings.colors)}
+    >
       <div
         className={`invitation-snap relative isolate mx-auto h-dvh w-full max-w-[430px] bg-background shadow-[0_0_40px_color-mix(in_srgb,var(--foreground)_12%,transparent)] ${
           opened ? "snap-y snap-mandatory overflow-y-auto" : "overflow-hidden"
@@ -70,70 +81,110 @@ export function InvitationShell({
             brideName={couple.brideName}
             groomName={couple.groomName}
             weddingAt={couple.weddingAt}
+            greeting={copy.coverGreeting}
             opened={opened}
             onOpen={() => setOpened(true)}
           />
 
           {opened ? (
             <>
-              <MusicToggle />
-              {inviteUrl ? (
+              <MusicToggle src={settings.musicUrl} />
+              {inviteUrl && show("qr") ? (
                 <QrSection
                   guestName={guestName}
                   inviteUrl={inviteUrl}
                   doorCode={doorCode}
                 />
               ) : null}
-              <CoupleSection
-                brideName={couple.brideName}
-                groomName={couple.groomName}
-              />
-              <VerseSection />
-              <ParentsSection />
-              <CountdownSection weddingAt={couple.weddingAt} />
-              <BrideDetailSection
-                person={{
-                  role: "The bride",
-                  name: couple.brideName,
-                  fullName: couple.brideFullName,
-                  parents: couple.brideParents,
-                }}
-              />
-              <GroomDetailSection
-                person={{
-                  role: "The groom",
-                  name: couple.groomName,
-                  fullName: couple.groomFullName,
-                  parents: couple.groomParents,
-                }}
-              />
-              <LoveStorySection />
-              <WeddingPartySection />
-              <EventsSection invitedTo={invitedTo} events={settings.events} />
-              <LocationSection invitedTo={invitedTo} events={settings.events} />
-              <RundownSection />
-              <DressCodeSection dressCode={settings.dressCode} />
-              <StaySection />
-              <LiveStreamSection />
-              <InstagramSection />
-              <RsvpSection
-                guestName={guestName}
-                guestToken={guestToken}
-                rsvpStatus={rsvpStatus}
-                rsvpCount={rsvpCount}
-              />
-              <GallerySection />
-              <GiftSection accounts={settings.bankAccounts} />
-              <FaqSection faq={settings.faq} />
-              <CommentsSection
-                guestName={guestName}
-                guestToken={guestToken}
-                comments={comments}
-              />
-              <ClosingSection
-                brideName={couple.brideName}
-                groomName={couple.groomName}
-              />
+              {show("couple") ? (
+                <CoupleSection
+                  brideName={couple.brideName}
+                  groomName={couple.groomName}
+                />
+              ) : null}
+              {show("verse") ? <VerseSection verse={copy.verse} /> : null}
+              {show("parents") ? (
+                <ParentsSection families={copy.families} />
+              ) : null}
+              {show("countdown") ? (
+                <CountdownSection weddingAt={couple.weddingAt} />
+              ) : null}
+              {show("bride") ? (
+                <BrideDetailSection
+                  person={{
+                    role: "The bride",
+                    name: couple.brideName,
+                    fullName: couple.brideFullName,
+                    parents: couple.brideParents,
+                  }}
+                />
+              ) : null}
+              {show("groom") ? (
+                <GroomDetailSection
+                  person={{
+                    role: "The groom",
+                    name: couple.groomName,
+                    fullName: couple.groomFullName,
+                    parents: couple.groomParents,
+                  }}
+                />
+              ) : null}
+              {show("loveStory") ? (
+                <LoveStorySection beats={copy.loveStory} />
+              ) : null}
+              {show("weddingParty") ? (
+                <WeddingPartySection party={copy.weddingParty} />
+              ) : null}
+              {show("events") ? (
+                <EventsSection invitedTo={invitedTo} events={settings.events} />
+              ) : null}
+              {show("location") ? (
+                <LocationSection
+                  invitedTo={invitedTo}
+                  events={settings.events}
+                />
+              ) : null}
+              {show("rundown") ? (
+                <RundownSection items={copy.rundown} />
+              ) : null}
+              {show("dressCode") ? (
+                <DressCodeSection dressCode={settings.dressCode} />
+              ) : null}
+              {show("stay") ? <StaySection stay={copy.stay} /> : null}
+              {show("liveStream") ? (
+                <LiveStreamSection liveStream={copy.liveStream} />
+              ) : null}
+              {show("instagram") ? (
+                <InstagramSection instagram={copy.instagram} />
+              ) : null}
+              {show("rsvp") ? (
+                <RsvpSection
+                  guestName={guestName}
+                  guestToken={guestToken}
+                  rsvpStatus={rsvpStatus}
+                  rsvpCount={rsvpCount}
+                  rsvpOpensAt={settings.rsvpOpensAt}
+                  rsvpClosesAt={settings.rsvpClosesAt}
+                />
+              ) : null}
+              {show("gallery") ? <GallerySection /> : null}
+              {show("gifts") ? (
+                <GiftSection accounts={settings.bankAccounts} />
+              ) : null}
+              {show("faq") ? <FaqSection faq={settings.faq} /> : null}
+              {show("comments") ? (
+                <CommentsSection
+                  guestName={guestName}
+                  guestToken={guestToken}
+                  comments={comments}
+                />
+              ) : null}
+              {show("closing") ? (
+                <ClosingSection
+                  brideName={couple.brideName}
+                  groomName={couple.groomName}
+                />
+              ) : null}
             </>
           ) : null}
         </InviteBusyProvider>

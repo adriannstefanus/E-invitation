@@ -1,8 +1,8 @@
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { verse } from "@/data/content";
 import { invitationMedia } from "@/data/media";
+import type { InviteCopy } from "@/lib/site-settings";
 
-export function VerseSection() {
+export function VerseSection({ verse }: { verse: InviteCopy["verse"] }) {
   return (
     <InvitationSection image={invitationMedia.verse.background} mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">

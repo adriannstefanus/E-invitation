@@ -9,7 +9,16 @@ import {
   createAdminSessionValue,
 } from "@/lib/admin-session";
 import { allocateDoorCodes, getGuestByDoorCode, getGuestById, getGuestByToken, getSiteSettings, saveSiteSettings } from "@/lib/db";
-import { isThemeId, mergeSiteSettings, combineDateTime, type SiteSettings } from "@/lib/site-settings";
+import {
+  INVITE_SECTIONS,
+  combineDateTime,
+  dropMatchingPresetColors,
+  isThemeId,
+  mergeSiteSettings,
+  sanitizeThemeColors,
+  type InviteSectionId,
+  type SiteSettings,
+} from "@/lib/site-settings";
 import { isDoorCodeQuery } from "@/lib/door-code";
 import { createGuestToken, parseInviteToken } from "@/lib/guest-token";
 import { createServiceClient } from "@/lib/supabase";
@@ -474,7 +483,14 @@ export async function saveInvitationSettings(formData: FormData) {
       if (!isThemeId(theme)) {
         redirect("/admin/invitation?error=settings");
       }
-      next = { ...next, theme };
+      next = {
+        ...next,
+        theme,
+        colors: dropMatchingPresetColors(
+          theme,
+          sanitizeThemeColors(parseJsonPayload(formData.get("payload"))),
+        ),
+      };
     } else if (section === "events") {
       next = {
         ...next,
@@ -553,6 +569,47 @@ export async function saveInvitationSettings(formData: FormData) {
         ...next,
         guestTypes: payload as SiteSettings["guestTypes"],
       });
+    } else if (section === "opening") {
+      next = {
+        ...next,
+        copy: {
+          ...next.copy,
+          coverGreeting: String(formData.get("coverGreeting") ?? "").trim(),
+        },
+        musicUrl: String(formData.get("musicUrl") ?? "").trim(),
+      };
+    } else if (section === "sections") {
+      const payload = parseJsonPayload(formData.get("payload"));
+      const selected = new Set(
+        Array.isArray(payload)
+          ? payload.map((item) => String(item))
+          : [],
+      );
+      next = {
+        ...next,
+        sections: Object.fromEntries(
+          INVITE_SECTIONS.map((item) => [item.id, selected.has(item.id)]),
+        ) as Record<InviteSectionId, boolean>,
+      };
+    } else if (section === "copy") {
+      const payload = parseJsonPayload(formData.get("payload"));
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        redirect("/admin/invitation?error=settings");
+      }
+      next = mergeSiteSettings({
+        ...next,
+        copy: {
+          ...next.copy,
+          ...(payload as Partial<SiteSettings["copy"]>),
+        },
+      });
+    } else if (section === "goLive") {
+      next = {
+        ...next,
+        published: formData.get("published") === "on",
+        rsvpOpensAt: String(formData.get("rsvpOpensAt") ?? "").trim(),
+        rsvpClosesAt: String(formData.get("rsvpClosesAt") ?? "").trim(),
+      };
     } else {
       redirect("/admin/invitation?error=settings");
     }
@@ -592,4 +649,111 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function asRecordList(value: unknown): Record<string, unknown>[] {
   return Array.isArray(value) ? value.map(asRecord) : [];
+}
+
+export async function setInviteSent(id: string, sent: boolean) {
+  if (!id) {
+    return { ok: false };
+  }
+
+  const { error } = await createServiceClient()
+    .from("guests")
+    .update({ invite_sent_at: sent ? new Date().toISOString() : null })
+    .eq("id", id);
+
+  if (error) {
+    return { ok: false };
+  }
+
+  revalidatePath("/admin/guests");
+  revalidatePath(`/admin/guests/${id}`);
+  return { ok: true };
+}
+
+export async function markInviteSent(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const sent = formData.get("sent") !== "0";
+  const next = String(formData.get("next") ?? "/admin/guests");
+  const result = await setInviteSent(id, sent);
+  redirect(`${guestPath(next)}${result.ok ? "?saved=sent" : "?error=sent"}`);
+}
+
+export async function resetCheckIns() {
+  const { error } = await createServiceClient()
+    .from("guests")
+    .update({
+      checked_in_at: null,
+      arrived_count: null,
+      check_in_method: null,
+    })
+    .gte("invited_count", 1);
+
+  if (error) {
+    redirect("/admin/invitation?error=reset");
+  }
+
+  revalidateAdminData();
+  redirect("/admin/invitation?saved=reset-door");
+}
+
+export async function resetGuestbook() {
+  const { error } = await createServiceClient()
+    .from("comments")
+    .delete()
+    .gt("created_at", "1970-01-01");
+
+  if (error) {
+    redirect("/admin/invitation?error=reset");
+  }
+
+  revalidateAdminData();
+  redirect("/admin/invitation?saved=reset-guestbook");
+}
+
+export async function resetGifts() {
+  const { error } = await createServiceClient()
+    .from("gifts")
+    .delete()
+    .gt("received_at", "1970-01-01");
+
+  if (error) {
+    redirect("/admin/invitation?error=reset");
+  }
+
+  revalidateAdminData();
+  redirect("/admin/invitation?saved=reset-gifts");
+}
+
+export async function wipeGuests(formData: FormData) {
+  if (String(formData.get("confirm") ?? "").trim() !== "RESET") {
+    redirect("/admin/invitation?error=wipe");
+  }
+
+  const { error } = await createServiceClient()
+    .from("guests")
+    .delete()
+    .gte("invited_count", 1);
+
+  if (error) {
+    redirect("/admin/invitation?error=reset");
+  }
+
+  revalidateAdminData();
+  redirect("/admin/invitation?saved=wipe");
+}
+
+function guestPath(next: string) {
+  return next.startsWith("/admin/guests") ? next.split("?")[0] : "/admin/guests";
+}
+
+function revalidateAdminData() {
+  revalidatePath("/");
+  revalidatePath("/g", "layout");
+  revalidatePath("/admin");
+  revalidatePath("/admin/invitation");
+  revalidatePath("/admin/guests");
+  revalidatePath("/admin/door");
+  revalidatePath("/admin/rsvp");
+  revalidatePath("/admin/comments");
+  revalidatePath("/admin/gifts");
 }

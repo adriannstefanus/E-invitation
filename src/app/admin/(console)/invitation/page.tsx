@@ -13,9 +13,9 @@ export default async function InvitationCustomizePage() {
   return (
     <AdminShell title="Invitation">
       <p className="mb-6 max-w-2xl text-sm leading-relaxed text-zinc-600">
-        Public invite settings, grouped by module. Later items stay in the same
-        group until we build them. Run{" "}
-        <code>supabase/migrate-site-settings.sql</code> once if save fails.
+        Public invite settings, grouped by module. Run{" "}
+        <code>supabase/migrate-site-settings.sql</code> if save fails, and{" "}
+        <code>supabase/migrate-invite-sent.sql</code> for invite-sent tracking.
       </p>
       <InvitationSettings settings={settings} />
     </AdminShell>

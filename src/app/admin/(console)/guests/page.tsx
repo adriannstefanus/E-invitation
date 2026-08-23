@@ -3,6 +3,7 @@ import { createGuest, importGuestsCsv } from "@/app/admin/actions";
 import { CopyText } from "@/components/admin/AdminControls";
 import { AdminShell, SetupNotice, TypeBadge } from "@/components/admin/AdminUi";
 import { GuestTypeOptions } from "@/components/admin/TypeBadge";
+import { InviteSentToggle } from "@/components/admin/InviteSentControl";
 import { WhatsAppSend } from "@/components/admin/WhatsAppSend";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormPageBusy } from "@/components/ui/PageBusy";
@@ -177,6 +178,7 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
                 <th className="px-3 py-2 font-medium">Phone</th>
                 <th className="px-3 py-2 font-medium">RSVP</th>
                 <th className="px-3 py-2 font-medium">Door</th>
+                <th className="px-3 py-2 font-medium">Sent</th>
                 <th className="px-3 py-2 font-medium">Invite</th>
               </tr>
             </thead>
@@ -224,12 +226,19 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
                     {guest.checked_in_at ? "Arrived" : "Waiting"}
                   </td>
                   <td className="px-3 py-2">
+                    {guest.invite_sent_at ? "Sent" : "Not sent"}
+                  </td>
+                  <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-2">
                       <CopyText value={inviteUrl} label="Copy link" />
                       <WhatsAppSend
                         guest={guest}
                         inviteUrl={inviteUrl}
                         templates={settings.whatsappTemplates}
+                      />
+                      <InviteSentToggle
+                        guestId={guest.id}
+                        sentAt={guest.invite_sent_at}
                       />
                     </div>
                   </td>

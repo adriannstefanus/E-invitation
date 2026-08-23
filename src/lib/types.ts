@@ -51,6 +51,7 @@ export type Guest = {
   checked_in_at: string | null;
   arrived_count: number | null;
   check_in_method: CheckInMethod | null;
+  invite_sent_at: string | null;
   created_at: string;
 };
 

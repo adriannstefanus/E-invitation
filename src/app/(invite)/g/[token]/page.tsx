@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ComingSoon } from "@/components/invitation/ComingSoon";
 import { InvitationShell } from "@/components/invitation/InvitationShell";
 import { getGuestByToken, getSiteSettings, listComments } from "@/lib/db";
 import { getInviteUrl } from "@/lib/invite-url";
@@ -27,6 +28,10 @@ export default async function GuestInvitePage({
     listComments(12),
     getSiteSettings(),
   ]);
+
+  if (!settings.published) {
+    return <ComingSoon settings={settings} />;
+  }
 
   return (
     <InvitationShell

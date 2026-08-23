@@ -51,6 +51,21 @@ export function flashFromSearchParams(
     };
   }
 
+  if (params.get("error") === "sent") {
+    return {
+      tone: "error",
+      message: "Could not mark invite sent. Run supabase/migrate-invite-sent.sql.",
+    };
+  }
+
+  if (params.get("error") === "reset") {
+    return { tone: "error", message: "Could not reset that data. Try again." };
+  }
+
+  if (params.get("error") === "wipe") {
+    return { tone: "error", message: "Type RESET to wipe all guests." };
+  }
+
   if (params.get("error") === "create") {
     const detail = params.get("detail");
     return {
@@ -63,6 +78,26 @@ export function flashFromSearchParams(
 
   if (params.get("saved") === "invite") {
     return { tone: "success", message: "Invitation settings saved." };
+  }
+
+  if (params.get("saved") === "sent") {
+    return { tone: "success", message: "Invite sent status updated." };
+  }
+
+  if (params.get("saved") === "reset-door") {
+    return { tone: "warning", message: "All check-ins were cleared." };
+  }
+
+  if (params.get("saved") === "reset-guestbook") {
+    return { tone: "warning", message: "Guestbook wishes were deleted." };
+  }
+
+  if (params.get("saved") === "reset-gifts") {
+    return { tone: "warning", message: "Logged gifts were deleted." };
+  }
+
+  if (params.get("saved") === "wipe") {
+    return { tone: "warning", message: "All guests were deleted." };
   }
 
   if (params.get("saved")) {

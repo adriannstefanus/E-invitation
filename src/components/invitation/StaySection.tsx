@@ -1,8 +1,8 @@
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { stay } from "@/data/content";
 import { invitationMedia } from "@/data/media";
+import type { InviteCopy } from "@/lib/site-settings";
 
-export function StaySection() {
+export function StaySection({ stay }: { stay: InviteCopy["stay"] }) {
   return (
     <InvitationSection image={invitationMedia.stay.background} mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">
@@ -12,14 +12,16 @@ export function StaySection() {
       <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted">
         {stay.detail}
       </p>
-      <a
-        href={stay.mapsUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="mt-8 inline-flex min-h-11 items-center rounded-full bg-accent px-8 text-sm tracking-wide text-white"
-      >
-        Open maps
-      </a>
+      {stay.mapsUrl ? (
+        <a
+          href={stay.mapsUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-8 inline-flex min-h-11 items-center rounded-full bg-accent px-8 text-sm tracking-wide text-white"
+        >
+          Open maps
+        </a>
+      ) : null}
     </InvitationSection>
   );
 }

@@ -3,7 +3,15 @@ import {
   dressCode,
   events,
   faq,
+  families,
+  instagram,
+  liveStream,
+  loveStory,
   personDetails,
+  rundown,
+  stay,
+  verse,
+  weddingParty,
 } from "@/data/content";
 import { formatDoorCode } from "@/lib/door-code-format";
 import {
@@ -55,6 +63,48 @@ export type GuestTypeStyle = {
   fg: string;
 };
 
+export const INVITE_SECTIONS = [
+  { id: "qr", label: "QR / door code" },
+  { id: "couple", label: "The couple" },
+  { id: "verse", label: "Verse" },
+  { id: "parents", label: "Parents" },
+  { id: "countdown", label: "Countdown" },
+  { id: "bride", label: "Bride detail" },
+  { id: "groom", label: "Groom detail" },
+  { id: "loveStory", label: "Love story" },
+  { id: "weddingParty", label: "Wedding party" },
+  { id: "events", label: "Event details" },
+  { id: "location", label: "Location" },
+  { id: "rundown", label: "Rundown" },
+  { id: "dressCode", label: "Dress code" },
+  { id: "stay", label: "Stay and travel" },
+  { id: "liveStream", label: "Live stream" },
+  { id: "instagram", label: "Instagram" },
+  { id: "rsvp", label: "RSVP" },
+  { id: "gallery", label: "Gallery" },
+  { id: "gifts", label: "Gifts" },
+  { id: "faq", label: "FAQ" },
+  { id: "comments", label: "Guestbook" },
+  { id: "closing", label: "Closing" },
+] as const;
+
+export type InviteSectionId = (typeof INVITE_SECTIONS)[number]["id"];
+
+export type InviteCopy = {
+  coverGreeting: string;
+  verse: { label: string; text: string; source: string };
+  families: {
+    bride: { title: string; names: string };
+    groom: { title: string; names: string };
+  };
+  loveStory: { year: string; title: string; text: string }[];
+  weddingParty: { name: string; role: string }[];
+  rundown: { time: string; title: string }[];
+  stay: { name: string; detail: string; mapsUrl: string };
+  liveStream: { label: string; url: string };
+  instagram: { hashtag: string; filterUrl: string };
+};
+
 export type SiteSettings = {
   theme: ThemeId;
   couple: {
@@ -75,7 +125,14 @@ export type SiteSettings = {
     colors: DressColor[];
   };
   whatsappTemplates: WhatsAppTemplate[];
+  colors: ThemeColorOverrides;
   guestTypes: Record<GuestType, GuestTypeStyle>;
+  copy: InviteCopy;
+  sections: Record<InviteSectionId, boolean>;
+  musicUrl: string;
+  published: boolean;
+  rsvpOpensAt: string;
+  rsvpClosesAt: string;
 };
 
 export const THEME_PRESETS: Record<
@@ -87,6 +144,51 @@ export const THEME_PRESETS: Record<
   burgundy: { label: "Burgundy", hint: "Wine" },
   navy: { label: "Navy", hint: "Evening blue" },
   blush: { label: "Blush", hint: "Dusty rose" },
+};
+
+export const CUSTOM_THEME_TOKENS = [
+  "accent",
+  "background",
+  "foreground",
+] as const;
+export type CustomThemeToken = (typeof CUSTOM_THEME_TOKENS)[number];
+export type ThemeColorOverrides = Partial<Record<CustomThemeToken, string>>;
+
+export const THEME_PRESET_COLORS: Record<
+  ThemeId,
+  Record<CustomThemeToken, string>
+> = {
+  cream: {
+    accent: "#8a6a4f",
+    background: "#f7f1e8",
+    foreground: "#3f3a34",
+  },
+  sage: {
+    accent: "#5c7a62",
+    background: "#eef3ea",
+    foreground: "#2f3b32",
+  },
+  burgundy: {
+    accent: "#8b3d4a",
+    background: "#f6eeec",
+    foreground: "#3a2a2c",
+  },
+  navy: {
+    accent: "#3d5a80",
+    background: "#eef1f6",
+    foreground: "#243044",
+  },
+  blush: {
+    accent: "#c47b86",
+    background: "#f8eeed",
+    foreground: "#4a3236",
+  },
+};
+
+export const CUSTOM_THEME_TOKEN_LABELS: Record<CustomThemeToken, string> = {
+  accent: "Accent",
+  background: "Paper",
+  foreground: "Text",
 };
 
 export const defaultSiteSettings: SiteSettings = {
@@ -135,6 +237,28 @@ export const defaultSiteSettings: SiteSettings = {
     family: { label: "Family", bg: "#e7e5e4", fg: "#44403c" },
     vendor: { label: "Vendor", bg: "#e0f2fe", fg: "#0c4a6e" },
   },
+  copy: {
+    coverGreeting: "you are invited to celebrate with us.",
+    verse: { ...verse },
+    families: {
+      bride: { ...families.bride },
+      groom: { ...families.groom },
+    },
+    loveStory: loveStory.map((beat) => ({ ...beat })),
+    weddingParty: weddingParty.map((person) => ({ ...person })),
+    rundown: rundown.map((item) => ({ ...item })),
+    stay: { ...stay },
+    liveStream: { ...liveStream },
+    instagram: { ...instagram },
+  },
+  sections: Object.fromEntries(
+    INVITE_SECTIONS.map((section) => [section.id, true]),
+  ) as Record<InviteSectionId, boolean>,
+  musicUrl: "",
+  published: true,
+  rsvpOpensAt: "",
+  rsvpClosesAt: "",
+  colors: {},
 };
 
 export function isThemeId(value: string): value is ThemeId {
@@ -189,7 +313,103 @@ export function mergeSiteSettings(raw: unknown): SiteSettings {
         ? parsed.whatsappTemplates
         : defaultSiteSettings.whatsappTemplates,
     guestTypes,
+    copy: mergeCopy(parsed.copy),
+    sections: mergeSections(parsed.sections),
+    musicUrl:
+      typeof parsed.musicUrl === "string"
+        ? parsed.musicUrl
+        : defaultSiteSettings.musicUrl,
+    published:
+      typeof parsed.published === "boolean"
+        ? parsed.published
+        : defaultSiteSettings.published,
+    rsvpOpensAt:
+      typeof parsed.rsvpOpensAt === "string"
+        ? parsed.rsvpOpensAt
+        : defaultSiteSettings.rsvpOpensAt,
+    rsvpClosesAt:
+      typeof parsed.rsvpClosesAt === "string"
+        ? parsed.rsvpClosesAt
+        : defaultSiteSettings.rsvpClosesAt,
+    colors: sanitizeThemeColors(parsed.colors),
   };
+}
+
+function mergeCopy(raw: Partial<InviteCopy> | undefined): InviteCopy {
+  const copy = raw ?? {};
+  return {
+    coverGreeting:
+      copy.coverGreeting ?? defaultSiteSettings.copy.coverGreeting,
+    verse: { ...defaultSiteSettings.copy.verse, ...copy.verse },
+    families: {
+      bride: {
+        ...defaultSiteSettings.copy.families.bride,
+        ...copy.families?.bride,
+      },
+      groom: {
+        ...defaultSiteSettings.copy.families.groom,
+        ...copy.families?.groom,
+      },
+    },
+    loveStory: Array.isArray(copy.loveStory)
+      ? copy.loveStory
+      : defaultSiteSettings.copy.loveStory,
+    weddingParty: Array.isArray(copy.weddingParty)
+      ? copy.weddingParty
+      : defaultSiteSettings.copy.weddingParty,
+    rundown: Array.isArray(copy.rundown)
+      ? copy.rundown
+      : defaultSiteSettings.copy.rundown,
+    stay: { ...defaultSiteSettings.copy.stay, ...copy.stay },
+    liveStream: {
+      ...defaultSiteSettings.copy.liveStream,
+      ...copy.liveStream,
+    },
+    instagram: {
+      ...defaultSiteSettings.copy.instagram,
+      ...copy.instagram,
+    },
+  };
+}
+
+function mergeSections(
+  raw: Partial<Record<InviteSectionId, boolean>> | undefined,
+): Record<InviteSectionId, boolean> {
+  const sections = { ...defaultSiteSettings.sections };
+  for (const section of INVITE_SECTIONS) {
+    const value = raw?.[section.id];
+    if (typeof value === "boolean") {
+      sections[section.id] = value;
+    }
+  }
+  return sections;
+}
+
+export function isSectionVisible(
+  settings: SiteSettings,
+  id: InviteSectionId,
+) {
+  return settings.sections[id] !== false;
+}
+
+export function fillCoverGreeting(greeting: string, guestName: string) {
+  return greeting.replaceAll("{name}", guestName);
+}
+
+export function rsvpWindowState(
+  opensAt: string,
+  closesAt: string,
+  now = new Date(),
+): "soon" | "open" | "closed" {
+  const start = opensAt ? new Date(`${opensAt}T00:00:00`) : null;
+  const end = closesAt ? new Date(`${closesAt}T23:59:59`) : null;
+  if (start && !Number.isNaN(start.getTime()) && now < start) {
+    return "soon";
+  }
+  if (end && !Number.isNaN(end.getTime()) && now > end) {
+    return "closed";
+  }
+  return "open";
 }
 
 export function fillWhatsAppTemplate(
@@ -291,4 +511,68 @@ function toLocalDate(value: string) {
   }
   const parsed = new Date(`${date}T${time || "00:00"}:00`);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+export function parseThemeColor(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const hex = value.trim();
+  if (/^#[0-9a-f]{6}$/i.test(hex)) {
+    return hex.toLowerCase();
+  }
+  const short = hex.match(/^#([0-9a-f]{3})$/i);
+  if (!short) {
+    return null;
+  }
+  const [a, b, c] = short[1];
+  return `#${a}${a}${b}${b}${c}${c}`.toLowerCase();
+}
+
+export function sanitizeThemeColors(raw: unknown): ThemeColorOverrides {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return {};
+  }
+  const input = raw as Record<string, unknown>;
+  const colors: ThemeColorOverrides = {};
+  for (const token of CUSTOM_THEME_TOKENS) {
+    const parsed = parseThemeColor(input[token]);
+    if (parsed) {
+      colors[token] = parsed;
+    }
+  }
+  return colors;
+}
+
+export function dropMatchingPresetColors(
+  theme: ThemeId,
+  colors: ThemeColorOverrides,
+): ThemeColorOverrides {
+  const next: ThemeColorOverrides = {};
+  for (const token of CUSTOM_THEME_TOKENS) {
+    const value = colors[token];
+    if (value && value !== THEME_PRESET_COLORS[theme][token]) {
+      next[token] = value;
+    }
+  }
+  return next;
+}
+
+export function themeTokenValue(
+  theme: ThemeId,
+  colors: ThemeColorOverrides,
+  token: CustomThemeToken,
+) {
+  return colors[token] ?? THEME_PRESET_COLORS[theme][token];
+}
+
+export function inviteThemeStyle(colors: ThemeColorOverrides) {
+  const style: Record<string, string> = {};
+  for (const token of CUSTOM_THEME_TOKENS) {
+    const value = colors[token];
+    if (value) {
+      style[`--${token}`] = value;
+    }
+  }
+  return style;
 }

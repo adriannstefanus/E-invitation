@@ -11,6 +11,7 @@ import { BackLink } from "@/components/admin/BackLink";
 import { ConfirmSubmit, CopyText } from "@/components/admin/AdminControls";
 import { AdminShell, SetupNotice, TypeBadge } from "@/components/admin/AdminUi";
 import { GuestTypeOptions } from "@/components/admin/TypeBadge";
+import { InviteSentToggle } from "@/components/admin/InviteSentControl";
 import { WhatsAppSend } from "@/components/admin/WhatsAppSend";
 import { QrImage } from "@/components/admin/QrImage";
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -170,6 +171,11 @@ export default async function GuestDetailPage({
                 inviteUrl={inviteUrl}
                 templates={settings.whatsappTemplates}
                 label="WhatsApp guest"
+              />
+              <InviteSentToggle
+                guestId={guest.id}
+                sentAt={guest.invite_sent_at}
+                next={`/admin/guests/${guest.id}`}
               />
               {hasPhone ? null : (
                 <span className="px-1 py-1.5 text-sm text-zinc-400">
