@@ -11,6 +11,7 @@ import {
 import { allocateDoorCodes, getGuestByDoorCode, getGuestById, getGuestByToken, getSiteSettings, saveSiteSettings } from "@/lib/db";
 import {
   INVITE_SECTIONS,
+  mergeSectionOrder,
   combineDateTime,
   dropMatchingPresetColors,
   isThemeId,
@@ -21,6 +22,14 @@ import {
 } from "@/lib/site-settings";
 import { isDoorCodeQuery } from "@/lib/door-code";
 import { createGuestToken, parseInviteToken } from "@/lib/guest-token";
+import {
+  INVITE_MEDIA_BUCKET,
+  INVITE_MUSIC_MAX_BYTES,
+  classifyInviteMusic,
+  inviteMusicContentType,
+  inviteMusicObjectPath,
+  otherInviteMusicExt,
+} from "@/lib/invite-media";
 import { createServiceClient } from "@/lib/supabase";
 import {
   isGuestType,
@@ -576,17 +585,22 @@ export async function saveInvitationSettings(formData: FormData) {
           ...next.copy,
           coverGreeting: String(formData.get("coverGreeting") ?? "").trim(),
         },
-        musicUrl: String(formData.get("musicUrl") ?? "").trim(),
       };
     } else if (section === "sections") {
       const payload = parseJsonPayload(formData.get("payload"));
-      const selected = new Set(
-        Array.isArray(payload)
-          ? payload.map((item) => String(item))
-          : [],
-      );
+      const row =
+        payload && typeof payload === "object" && !Array.isArray(payload)
+          ? (payload as Record<string, unknown>)
+          : null;
+      const visibleIds = Array.isArray(row?.visible)
+        ? row.visible.map(String)
+        : Array.isArray(payload)
+          ? payload.map(String)
+          : [];
+      const selected = new Set(visibleIds);
       next = {
         ...next,
+        sectionOrder: mergeSectionOrder(row?.order),
         sections: Object.fromEntries(
           INVITE_SECTIONS.map((item) => [item.id, selected.has(item.id)]),
         ) as Record<InviteSectionId, boolean>,
@@ -622,11 +636,97 @@ export async function saveInvitationSettings(formData: FormData) {
     redirect("/admin/invitation?error=settings");
   }
 
+  revalidateInvite();
+  redirect("/admin/invitation?saved=invite");
+}
+
+export async function uploadInviteMusic(formData: FormData) {
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    redirect("/admin/invitation?error=music-type");
+  }
+  if (file.size > INVITE_MUSIC_MAX_BYTES) {
+    redirect("/admin/invitation?error=music-size");
+  }
+
+  const header = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const ext = classifyInviteMusic({
+    name: file.name,
+    type: file.type,
+    header,
+  });
+  if (!ext) {
+    redirect("/admin/invitation?error=music-type");
+  }
+
+  const path = inviteMusicObjectPath(ext);
+  const bytes = new Uint8Array(await file.arrayBuffer());
+
+  try {
+    const storage = createServiceClient().storage.from(INVITE_MEDIA_BUCKET);
+    const { error: uploadError } = await storage.upload(path, bytes, {
+      contentType: inviteMusicContentType(ext),
+      upsert: true,
+      cacheControl: "3600",
+    });
+
+    if (uploadError) {
+      redirect(musicStorageRedirect(uploadError.message));
+    }
+
+    await storage.remove([inviteMusicObjectPath(otherInviteMusicExt(ext))]);
+
+    const { data } = storage.getPublicUrl(path);
+    const current = await getSiteSettings();
+    await saveSiteSettings({
+      ...current,
+      musicUrl: `${data.publicUrl}?v=${Date.now()}`,
+    });
+  } catch (error) {
+    if (isNextRedirect(error)) {
+      throw error;
+    }
+    redirect("/admin/invitation?error=music");
+  }
+
+  revalidateInvite();
+  redirect("/admin/invitation?saved=music");
+}
+
+export async function clearInviteMusic() {
+  const storage = createServiceClient().storage.from(INVITE_MEDIA_BUCKET);
+  await storage.remove([
+    inviteMusicObjectPath("mp3"),
+    inviteMusicObjectPath("m4a"),
+  ]);
+
+  const current = await getSiteSettings();
+  try {
+    await saveSiteSettings({ ...current, musicUrl: "" });
+  } catch (error) {
+    if (isNextRedirect(error)) {
+      throw error;
+    }
+    redirect("/admin/invitation?error=settings");
+  }
+
+  revalidateInvite();
+  redirect("/admin/invitation?saved=music-cleared");
+}
+
+function revalidateInvite() {
   revalidatePath("/");
   revalidatePath("/g", "layout");
   revalidatePath("/admin");
   revalidatePath("/admin/invitation");
-  redirect("/admin/invitation?saved=invite");
+  revalidatePath("/admin/invitation/preview");
+}
+
+function musicStorageRedirect(message: string) {
+  if (/bucket/i.test(message) || /not found/i.test(message)) {
+    return "/admin/invitation?error=music-storage";
+  }
+  return "/admin/invitation?error=music";
 }
 
 function parseJsonPayload(value: FormDataEntryValue | null): unknown {

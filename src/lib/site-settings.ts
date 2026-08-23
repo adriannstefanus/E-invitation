@@ -131,6 +131,7 @@ export type SiteSettings = {
   guestTypes: Record<GuestType, GuestTypeStyle>;
   copy: InviteCopy;
   sections: Record<InviteSectionId, boolean>;
+  sectionOrder: InviteSectionId[];
   musicUrl: string;
   published: boolean;
   rsvpOpensAt: string;
@@ -258,6 +259,7 @@ export const defaultSiteSettings: SiteSettings = {
   sections: Object.fromEntries(
     INVITE_SECTIONS.map((section) => [section.id, true]),
   ) as Record<InviteSectionId, boolean>,
+  sectionOrder: INVITE_SECTIONS.map((section) => section.id),
   musicUrl: "",
   published: true,
   rsvpOpensAt: "",
@@ -319,6 +321,7 @@ export function mergeSiteSettings(raw: unknown): SiteSettings {
     guestTypes,
     copy: mergeCopy(parsed.copy),
     sections: mergeSections(parsed.sections),
+    sectionOrder: mergeSectionOrder(parsed.sectionOrder),
     musicUrl:
       typeof parsed.musicUrl === "string"
         ? parsed.musicUrl
@@ -389,6 +392,37 @@ function mergeSections(
     }
   }
   return sections;
+}
+
+export function isInviteSectionId(value: string): value is InviteSectionId {
+  return INVITE_SECTIONS.some((section) => section.id === value);
+}
+
+export function mergeSectionOrder(raw: unknown): InviteSectionId[] {
+  const seen = new Set<InviteSectionId>();
+  const order: InviteSectionId[] = [];
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      if (typeof item === "string" && isInviteSectionId(item) && !seen.has(item)) {
+        seen.add(item);
+        order.push(item);
+      }
+    }
+  }
+  for (const section of INVITE_SECTIONS) {
+    if (!seen.has(section.id)) {
+      order.push(section.id);
+    }
+  }
+  return order;
+}
+
+export function orderedInviteSections(settings: SiteSettings) {
+  return mergeSectionOrder(settings.sectionOrder);
+}
+
+export function inviteSectionLabel(id: InviteSectionId) {
+  return INVITE_SECTIONS.find((section) => section.id === id)?.label ?? id;
 }
 
 export function isSectionVisible(

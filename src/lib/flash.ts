@@ -58,6 +58,32 @@ export function flashFromSearchParams(
     };
   }
 
+  if (params.get("error") === "music-type") {
+    return {
+      tone: "error",
+      message: "Use an MP3 or M4A file.",
+    };
+  }
+
+  if (params.get("error") === "music-size") {
+    return {
+      tone: "error",
+      message: "Keep the song under 10 MB.",
+    };
+  }
+
+  if (params.get("error") === "music-storage") {
+    return {
+      tone: "error",
+      message:
+        "Could not store the song. Run supabase/migrate-invite-media.sql.",
+    };
+  }
+
+  if (params.get("error") === "music") {
+    return { tone: "error", message: "Could not update invite music. Try again." };
+  }
+
   if (params.get("error") === "reset") {
     return { tone: "error", message: "Could not reset that data. Try again." };
   }
@@ -78,6 +104,14 @@ export function flashFromSearchParams(
 
   if (params.get("saved") === "invite") {
     return { tone: "success", message: "Invitation settings saved." };
+  }
+
+  if (params.get("saved") === "music") {
+    return { tone: "success", message: "Background music uploaded." };
+  }
+
+  if (params.get("saved") === "music-cleared") {
+    return { tone: "warning", message: "Background music removed." };
   }
 
   if (params.get("saved") === "sent") {

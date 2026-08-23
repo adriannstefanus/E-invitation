@@ -94,3 +94,15 @@ create trigger guests_set_door_code
 before insert on guests
 for each row
 execute function guests_set_door_code();
+
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('invite-media', 'invite-media', true, 10485760)
+on conflict (id) do update set
+  public = true,
+  file_size_limit = 10485760;
+
+drop policy if exists "Public read invite-media" on storage.objects;
+create policy "Public read invite-media"
+on storage.objects
+for select
+using (bucket_id = 'invite-media');

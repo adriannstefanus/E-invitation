@@ -14,8 +14,10 @@ export default async function InvitationCustomizePage() {
     <AdminShell title="Invitation">
       <p className="mb-6 max-w-2xl text-sm leading-relaxed text-zinc-600">
         Public invite settings, grouped by module. Run{" "}
-        <code>supabase/migrate-site-settings.sql</code> if save fails, and{" "}
-        <code>supabase/migrate-invite-sent.sql</code> for invite-sent tracking.
+        <code>supabase/migrate-site-settings.sql</code> if save fails,{" "}
+        <code>supabase/migrate-invite-sent.sql</code> for invite-sent tracking,
+        and <code>supabase/migrate-invite-media.sql</code> before uploading
+        music.
       </p>
       <InvitationSettings settings={settings} />
     </AdminShell>

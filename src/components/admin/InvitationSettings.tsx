@@ -73,9 +73,9 @@ const MODULES = [
     title: "Invite copy",
     live: [
       "Cover greeting",
-      "Show or hide sections",
+      "Show, hide, and order sections",
       "Verse, parents, story, rundown, party",
-      "Music URL",
+      "Background music (MP3 or M4A)",
     ],
     later: ["English / Indonesian", "Photo and video upload"],
   },

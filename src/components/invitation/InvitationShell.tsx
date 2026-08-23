@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, type ReactNode, Fragment } from "react";
 import { ClosingSection } from "@/components/invitation/ClosingSection";
 import { CommentsSection } from "@/components/invitation/CommentsSection";
 import { CountdownSection } from "@/components/invitation/CountdownSection";
@@ -16,7 +16,10 @@ import { InviteBusyProvider } from "@/components/invitation/InviteBusy";
 import { LiveStreamSection } from "@/components/invitation/LiveStreamSection";
 import { LocationSection } from "@/components/invitation/LocationSection";
 import { LoveStorySection } from "@/components/invitation/LoveStorySection";
-import { MusicToggle } from "@/components/invitation/MusicToggle";
+import {
+  MusicToggle,
+  type MusicToggleHandle,
+} from "@/components/invitation/MusicToggle";
 import { ParentsSection } from "@/components/invitation/ParentsSection";
 import {
   BrideDetailSection,
@@ -32,6 +35,8 @@ import type { GuestbookComment, InviteEvent, RsvpStatus } from "@/lib/types";
 import {
   inviteThemeStyle,
   isSectionVisible,
+  orderedInviteSections,
+  type InviteSectionId,
   type SiteSettings,
 } from "@/lib/site-settings";
 
@@ -59,10 +64,115 @@ export function InvitationShell({
   settings,
 }: InvitationShellProps) {
   const [opened, setOpened] = useState(false);
+  const musicRef = useRef<MusicToggleHandle>(null);
   const couple = settings.couple;
   const copy = settings.copy;
-  const show = (id: Parameters<typeof isSectionVisible>[1]) =>
-    isSectionVisible(settings, id);
+
+  function renderSection(id: InviteSectionId): ReactNode {
+    if (!isSectionVisible(settings, id)) {
+      return null;
+    }
+
+    switch (id) {
+      case "qr":
+        return inviteUrl ? (
+          <QrSection
+            guestName={guestName}
+            inviteUrl={inviteUrl}
+            doorCode={doorCode}
+          />
+        ) : null;
+      case "couple":
+        return (
+          <CoupleSection
+            brideName={couple.brideName}
+            groomName={couple.groomName}
+          />
+        );
+      case "verse":
+        return <VerseSection verse={copy.verse} />;
+      case "parents":
+        return <ParentsSection families={copy.families} />;
+      case "countdown":
+        return <CountdownSection weddingAt={couple.weddingAt} />;
+      case "bride":
+        return (
+          <BrideDetailSection
+            person={{
+              role: "The bride",
+              name: couple.brideName,
+              fullName: couple.brideFullName,
+              parents: couple.brideParents,
+            }}
+          />
+        );
+      case "groom":
+        return (
+          <GroomDetailSection
+            person={{
+              role: "The groom",
+              name: couple.groomName,
+              fullName: couple.groomFullName,
+              parents: couple.groomParents,
+            }}
+          />
+        );
+      case "loveStory":
+        return <LoveStorySection beats={copy.loveStory} />;
+      case "weddingParty":
+        return <WeddingPartySection party={copy.weddingParty} />;
+      case "events":
+        return <EventsSection invitedTo={invitedTo} events={settings.events} />;
+      case "location":
+        return (
+          <LocationSection invitedTo={invitedTo} events={settings.events} />
+        );
+      case "rundown":
+        return <RundownSection items={copy.rundown} />;
+      case "dressCode":
+        return <DressCodeSection dressCode={settings.dressCode} />;
+      case "stay":
+        return <StaySection stay={copy.stay} />;
+      case "liveStream":
+        return <LiveStreamSection liveStream={copy.liveStream} />;
+      case "instagram":
+        return <InstagramSection instagram={copy.instagram} />;
+      case "rsvp":
+        return (
+          <RsvpSection
+            guestName={guestName}
+            guestToken={guestToken}
+            rsvpStatus={rsvpStatus}
+            rsvpCount={rsvpCount}
+            rsvpOpensAt={settings.rsvpOpensAt}
+            rsvpClosesAt={settings.rsvpClosesAt}
+          />
+        );
+      case "gallery":
+        return <GallerySection />;
+      case "gifts":
+        return <GiftSection accounts={settings.bankAccounts} />;
+      case "faq":
+        return <FaqSection faq={settings.faq} />;
+      case "comments":
+        return (
+          <CommentsSection
+            guestName={guestName}
+            guestToken={guestToken}
+            comments={comments}
+          />
+        );
+      case "closing":
+        return (
+          <ClosingSection
+            brideName={couple.brideName}
+            groomName={couple.groomName}
+          />
+        );
+      default:
+        return null;
+    }
+  }
 
   return (
     <div
@@ -83,110 +193,25 @@ export function InvitationShell({
             weddingAt={couple.weddingAt}
             greeting={copy.coverGreeting}
             opened={opened}
-            onOpen={() => setOpened(true)}
+            onOpen={() => {
+              setOpened(true);
+              musicRef.current?.start();
+            }}
           />
 
-          {opened ? (
-            <>
-              <MusicToggle src={settings.musicUrl} />
-              {inviteUrl && show("qr") ? (
-                <QrSection
-                  guestName={guestName}
-                  inviteUrl={inviteUrl}
-                  doorCode={doorCode}
-                />
-              ) : null}
-              {show("couple") ? (
-                <CoupleSection
-                  brideName={couple.brideName}
-                  groomName={couple.groomName}
-                />
-              ) : null}
-              {show("verse") ? <VerseSection verse={copy.verse} /> : null}
-              {show("parents") ? (
-                <ParentsSection families={copy.families} />
-              ) : null}
-              {show("countdown") ? (
-                <CountdownSection weddingAt={couple.weddingAt} />
-              ) : null}
-              {show("bride") ? (
-                <BrideDetailSection
-                  person={{
-                    role: "The bride",
-                    name: couple.brideName,
-                    fullName: couple.brideFullName,
-                    parents: couple.brideParents,
-                  }}
-                />
-              ) : null}
-              {show("groom") ? (
-                <GroomDetailSection
-                  person={{
-                    role: "The groom",
-                    name: couple.groomName,
-                    fullName: couple.groomFullName,
-                    parents: couple.groomParents,
-                  }}
-                />
-              ) : null}
-              {show("loveStory") ? (
-                <LoveStorySection beats={copy.loveStory} />
-              ) : null}
-              {show("weddingParty") ? (
-                <WeddingPartySection party={copy.weddingParty} />
-              ) : null}
-              {show("events") ? (
-                <EventsSection invitedTo={invitedTo} events={settings.events} />
-              ) : null}
-              {show("location") ? (
-                <LocationSection
-                  invitedTo={invitedTo}
-                  events={settings.events}
-                />
-              ) : null}
-              {show("rundown") ? (
-                <RundownSection items={copy.rundown} />
-              ) : null}
-              {show("dressCode") ? (
-                <DressCodeSection dressCode={settings.dressCode} />
-              ) : null}
-              {show("stay") ? <StaySection stay={copy.stay} /> : null}
-              {show("liveStream") ? (
-                <LiveStreamSection liveStream={copy.liveStream} />
-              ) : null}
-              {show("instagram") ? (
-                <InstagramSection instagram={copy.instagram} />
-              ) : null}
-              {show("rsvp") ? (
-                <RsvpSection
-                  guestName={guestName}
-                  guestToken={guestToken}
-                  rsvpStatus={rsvpStatus}
-                  rsvpCount={rsvpCount}
-                  rsvpOpensAt={settings.rsvpOpensAt}
-                  rsvpClosesAt={settings.rsvpClosesAt}
-                />
-              ) : null}
-              {show("gallery") ? <GallerySection /> : null}
-              {show("gifts") ? (
-                <GiftSection accounts={settings.bankAccounts} />
-              ) : null}
-              {show("faq") ? <FaqSection faq={settings.faq} /> : null}
-              {show("comments") ? (
-                <CommentsSection
-                  guestName={guestName}
-                  guestToken={guestToken}
-                  comments={comments}
-                />
-              ) : null}
-              {show("closing") ? (
-                <ClosingSection
-                  brideName={couple.brideName}
-                  groomName={couple.groomName}
-                />
-              ) : null}
-            </>
+          {settings.musicUrl ? (
+            <MusicToggle
+              ref={musicRef}
+              src={settings.musicUrl}
+              visible={opened}
+            />
           ) : null}
+
+          {opened
+            ? orderedInviteSections(settings).map((id) => (
+                <Fragment key={id}>{renderSection(id)}</Fragment>
+              ))
+            : null}
         </InviteBusyProvider>
       </div>
     </div>

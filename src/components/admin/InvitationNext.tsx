@@ -2,10 +2,12 @@
 
 import { useState, type ReactNode } from "react";
 import {
+  clearInviteMusic,
   resetCheckIns,
   resetGifts,
   resetGuestbook,
   saveInvitationSettings,
+  uploadInviteMusic,
   wipeGuests,
 } from "@/app/admin/actions";
 import { ConfirmSubmit } from "@/components/admin/AdminControls";
@@ -16,8 +18,10 @@ import {
   fieldClass,
 } from "@/components/admin/InvitationChrome";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { INVITE_MUSIC_ACCEPT } from "@/lib/invite-media";
 import {
-  INVITE_SECTIONS,
+  inviteSectionLabel,
+  orderedInviteSections,
   type InviteCopy,
   type InviteSectionId,
   type SiteSettings,
@@ -48,7 +52,7 @@ export function InviteCopyGroup({ settings }: { settings: SiteSettings }) {
 function OpeningForm({ settings }: { settings: SiteSettings }) {
   return (
     <div>
-      <ItemHeading>Cover greeting and music</ItemHeading>
+      <ItemHeading>Cover greeting</ItemHeading>
       <form action={saveInvitationSettings} className="space-y-3">
         <input type="hidden" name="section" value="opening" />
         <label className="block text-sm">
@@ -64,53 +68,148 @@ function OpeningForm({ settings }: { settings: SiteSettings }) {
             text.
           </span>
         </label>
-        <label className="block text-sm">
-          Music URL
-          <input
-            name="musicUrl"
-            type="url"
-            defaultValue={settings.musicUrl}
-            placeholder="https://…"
-            className={fieldClass}
-          />
-        </label>
         <SaveButton />
       </form>
+      <div className="mt-8 border-t border-zinc-100 pt-8">
+        <ItemHeading>Background music</ItemHeading>
+        <p className="mb-3 text-sm text-zinc-600">
+          MP3 or M4A, up to 10 MB. MP3 plays everywhere; M4A is what iPhones
+          usually export. The song starts when a guest opens the invite, then
+          loops. They can mute it with ♪.
+        </p>
+        {settings.musicUrl ? (
+          <div className="mb-4 space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3">
+            <p className="text-sm text-zinc-700">
+              Current song ({musicKindLabel(settings.musicUrl)}) is on the
+              invite.
+            </p>
+            <audio
+              controls
+              preload="metadata"
+              src={settings.musicUrl}
+              className="w-full"
+            />
+            <form action={clearInviteMusic}>
+              <ConfirmSubmit
+                label="Remove song"
+                confirmLabel="Remove background music from the invite?"
+                pendingLabel="Removing…"
+                className="rounded-md border border-zinc-300 px-3 py-2 text-sm hover:bg-white"
+              />
+            </form>
+          </div>
+        ) : (
+          <p className="mb-3 text-xs text-zinc-500">
+            No song yet. The ♪ button stays hidden until you upload one.
+          </p>
+        )}
+        <form action={uploadInviteMusic} className="space-y-3">
+          <label className="block text-sm">
+            Upload MP3 or M4A
+            <input
+              name="file"
+              type="file"
+              accept={INVITE_MUSIC_ACCEPT}
+              required
+              className={`${fieldClass} file:mr-3 file:rounded-md file:border-0 file:bg-zinc-900 file:px-3 file:py-1.5 file:text-sm file:text-white`}
+            />
+          </label>
+          <SubmitButton
+            pendingLabel="Uploading…"
+            className="rounded-md bg-zinc-900 px-3 py-2 text-sm text-white"
+          >
+            Upload song
+          </SubmitButton>
+        </form>
+      </div>
     </div>
   );
 }
 
+function musicKindLabel(url: string) {
+  if (/\.m4a(\?|$)/i.test(url)) {
+    return "M4A";
+  }
+  if (/\.mp3(\?|$)/i.test(url)) {
+    return "MP3";
+  }
+  return "audio";
+}
+
 function SectionsForm({ settings }: { settings: SiteSettings }) {
-  const [visible, setVisible] = useState(
-    INVITE_SECTIONS.filter((section) => settings.sections[section.id]).map(
-      (section) => section.id,
+  const [order, setOrder] = useState<InviteSectionId[]>(() =>
+    orderedInviteSections(settings),
+  );
+  const [visible, setVisible] = useState<InviteSectionId[]>(() =>
+    orderedInviteSections(settings).filter(
+      (id) => settings.sections[id] !== false,
     ),
   );
 
+  function move(index: number, direction: -1 | 1) {
+    const next = index + direction;
+    if (next < 0 || next >= order.length) {
+      return;
+    }
+    setOrder((current) => {
+      const copy = [...current];
+      const [item] = copy.splice(index, 1);
+      copy.splice(next, 0, item);
+      return copy;
+    });
+  }
+
   return (
     <div>
-      <ItemHeading>Show or hide sections</ItemHeading>
+      <ItemHeading>Show, hide, and order</ItemHeading>
+      <p className="mb-3 text-sm text-zinc-600">
+        Cover stays first. Unchecked sections stay in this list so their place
+        is kept when you show them again.
+      </p>
       <form action={saveInvitationSettings} className="space-y-3">
         <input type="hidden" name="section" value="sections" />
-        <input type="hidden" name="payload" value={JSON.stringify(visible)} />
-        <div className="grid gap-2 sm:grid-cols-2">
-          {INVITE_SECTIONS.map((section) => (
-            <label key={section.id} className="flex items-center gap-2 text-sm">
+        <input
+          type="hidden"
+          name="payload"
+          value={JSON.stringify({ order, visible })}
+        />
+        <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200">
+          {order.map((id, index) => (
+            <li
+              key={id}
+              className="flex items-center gap-2 px-3 py-2 text-sm"
+            >
               <input
                 type="checkbox"
-                checked={visible.includes(section.id)}
+                checked={visible.includes(id)}
                 onChange={(event) =>
                   setVisible((current) =>
                     event.target.checked
-                      ? [...current, section.id]
-                      : current.filter((id) => id !== section.id),
+                      ? [...current, id]
+                      : current.filter((item) => item !== id),
                   )
                 }
               />
-              {section.label}
-            </label>
+              <span className="flex-1">{inviteSectionLabel(id)}</span>
+              <button
+                type="button"
+                onClick={() => move(index, -1)}
+                disabled={index === 0}
+                className="rounded-md border border-zinc-300 px-2 py-1 text-xs disabled:opacity-40"
+              >
+                Up
+              </button>
+              <button
+                type="button"
+                onClick={() => move(index, 1)}
+                disabled={index === order.length - 1}
+                className="rounded-md border border-zinc-300 px-2 py-1 text-xs disabled:opacity-40"
+              >
+                Down
+              </button>
+            </li>
           ))}
-        </div>
+        </ul>
         <SaveButton />
       </form>
     </div>

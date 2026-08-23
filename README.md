@@ -29,6 +29,8 @@ Staff: [http://localhost:3000/admin](http://localhost:3000/admin)
 
 Add guests (and type: regular / vip / family / vendor), then open each guest to copy `/g/...` and the QR. Guests show that QR at the door; staff scan it on **Door**.
 
+For background music, run [`supabase/migrate-invite-media.sql`](supabase/migrate-invite-media.sql) once, then upload an MP3 or M4A on **Invitation**.
+
 `?to=Andi` still works for a nameless preview without a token.
 
 ## Media
