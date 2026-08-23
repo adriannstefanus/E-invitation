@@ -549,7 +549,7 @@ function BanksForm({ settings }: { settings: SiteSettings }) {
         <input type="hidden" name="payload" value={JSON.stringify(accounts)} />
         {accounts.map((account, index) => (
           <div
-            key={`${account.bank}-${index}`}
+            key={`account-${index}`}
             className="grid gap-2 rounded-xl border border-zinc-200 p-3 sm:grid-cols-3"
           >
             <input
