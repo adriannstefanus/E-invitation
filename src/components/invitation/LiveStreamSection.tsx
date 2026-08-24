@@ -1,5 +1,4 @@
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { invitationMedia } from "@/data/media";
 import type { InviteCopy } from "@/lib/site-settings";
 
 export function LiveStreamSection({
@@ -8,10 +7,7 @@ export function LiveStreamSection({
   liveStream: InviteCopy["liveStream"];
 }) {
   return (
-    <InvitationSection
-      image={invitationMedia.liveStream.background}
-      mediaAlt=""
-    >
+    <InvitationSection section="liveStream" mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">
         Live stream
       </p>

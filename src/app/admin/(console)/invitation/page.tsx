@@ -17,7 +17,7 @@ export default async function InvitationCustomizePage() {
         <code>supabase/migrate-site-settings.sql</code> if save fails,{" "}
         <code>supabase/migrate-invite-sent.sql</code> for invite-sent tracking,
         and <code>supabase/migrate-invite-media.sql</code> before uploading
-        music.
+        music, photos, or video.
       </p>
       <InvitationSettings settings={settings} />
     </AdminShell>

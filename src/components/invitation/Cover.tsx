@@ -1,7 +1,6 @@
 "use client";
 
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { invitationMedia } from "@/data/media";
 import { fillCoverGreeting, formatWeddingWhen } from "@/lib/site-settings";
 
 type CoverProps = {
@@ -12,6 +11,8 @@ type CoverProps = {
   greeting: string;
   opened: boolean;
   onOpen: () => void;
+  image: string;
+  video?: string;
 };
 
 export function Cover({
@@ -22,13 +23,15 @@ export function Cover({
   greeting,
   opened,
   onOpen,
+  image,
+  video,
 }: CoverProps) {
   const when = weddingAt ? formatWeddingWhen(weddingAt) : null;
   const line = fillCoverGreeting(greeting, guestName);
   return (
     <InvitationSection
-      image={invitationMedia.cover.image}
-      video={invitationMedia.cover.video}
+      image={image}
+      video={video}
       mediaAlt=""
       priority
     >

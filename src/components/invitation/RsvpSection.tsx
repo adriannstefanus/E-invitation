@@ -5,7 +5,6 @@ import { submitRsvp } from "@/app/invite/actions";
 import { InvitationSection } from "@/components/invitation/InvitationSection";
 import { useInviteBusy } from "@/components/invitation/InviteBusy";
 import { useToast } from "@/components/ui/Toast";
-import { invitationMedia } from "@/data/media";
 import { formatWeddingWhen, rsvpWindowState } from "@/lib/site-settings";
 import type { RsvpStatus } from "@/lib/types";
 
@@ -63,7 +62,7 @@ export function RsvpSection({
   }
 
   return (
-    <InvitationSection image={invitationMedia.rsvp.background} mediaAlt="">
+    <InvitationSection section="rsvp" mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">RSVP</p>
       <h2 className="font-display mt-3 text-3xl">Will you join us?</h2>
       {windowState === "soon" ? (

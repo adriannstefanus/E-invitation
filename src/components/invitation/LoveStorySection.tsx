@@ -1,5 +1,4 @@
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { invitationMedia } from "@/data/media";
 import type { InviteCopy } from "@/lib/site-settings";
 
 export function LoveStorySection({
@@ -8,7 +7,7 @@ export function LoveStorySection({
   beats: InviteCopy["loveStory"];
 }) {
   return (
-    <InvitationSection image={invitationMedia.story.background} mediaAlt="">
+    <InvitationSection section="loveStory" mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">Our story</p>
       <div className="mt-6 w-full space-y-3">
         {beats.map((beat, index) => (

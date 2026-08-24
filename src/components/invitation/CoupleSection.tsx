@@ -1,22 +1,25 @@
 import { InvitationSection } from "@/components/invitation/InvitationSection";
 import { PhotoSlot } from "@/components/invitation/PhotoSlot";
-import { invitationMedia } from "@/data/media";
 
 export function CoupleSection({
   brideName,
   groomName,
+  bridePhoto,
+  groomPhoto,
 }: {
   brideName: string;
   groomName: string;
+  bridePhoto: string;
+  groomPhoto: string;
 }) {
   return (
-    <InvitationSection image={invitationMedia.couple.background} mediaAlt="">
+    <InvitationSection section="couple" mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">
         The couple
       </p>
       <div className="mt-8 grid w-full grid-cols-2 gap-5">
-        <PersonSlot src={invitationMedia.couple.bride} label={brideName} />
-        <PersonSlot src={invitationMedia.couple.groom} label={groomName} />
+        <PersonSlot src={bridePhoto} label={brideName} />
+        <PersonSlot src={groomPhoto} label={groomName} />
       </div>
     </InvitationSection>
   );

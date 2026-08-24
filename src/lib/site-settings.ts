@@ -107,6 +107,23 @@ export type InviteCopy = {
   instagram: { hashtag: string; filterUrl: string };
 };
 
+export type InviteBackdropUpload = {
+  image: string;
+  video: string;
+};
+
+export type InviteMedia = {
+  coverImage: string;
+  coverVideo: string;
+  closingImage: string;
+  closingVideo: string;
+  bride: string;
+  groom: string;
+  gallery: string[];
+  party: string[];
+  backdrops: Partial<Record<InviteSectionId, InviteBackdropUpload>>;
+};
+
 export type SiteSettings = {
   theme: ThemeId;
   couple: {
@@ -133,6 +150,7 @@ export type SiteSettings = {
   sections: Record<InviteSectionId, boolean>;
   sectionOrder: InviteSectionId[];
   musicUrl: string;
+  media: InviteMedia;
   published: boolean;
   rsvpOpensAt: string;
   rsvpClosesAt: string;
@@ -261,6 +279,17 @@ export const defaultSiteSettings: SiteSettings = {
   ) as Record<InviteSectionId, boolean>,
   sectionOrder: INVITE_SECTIONS.map((section) => section.id),
   musicUrl: "",
+  media: {
+    coverImage: "",
+    coverVideo: "",
+    closingImage: "",
+    closingVideo: "",
+    bride: "",
+    groom: "",
+    gallery: [],
+    party: [],
+    backdrops: {},
+  },
   published: true,
   rsvpOpensAt: "",
   rsvpClosesAt: "",
@@ -326,6 +355,7 @@ export function mergeSiteSettings(raw: unknown): SiteSettings {
       typeof parsed.musicUrl === "string"
         ? parsed.musicUrl
         : defaultSiteSettings.musicUrl,
+    media: mergeInviteMedia(parsed.media),
     published:
       typeof parsed.published === "boolean"
         ? parsed.published
@@ -340,6 +370,52 @@ export function mergeSiteSettings(raw: unknown): SiteSettings {
         : defaultSiteSettings.rsvpClosesAt,
     colors: sanitizeThemeColors(parsed.colors),
   };
+}
+
+function mergeInviteMedia(raw: InviteMedia | undefined): InviteMedia {
+  const parsed: Partial<InviteMedia> = raw ?? {};
+  return {
+    coverImage:
+      typeof parsed.coverImage === "string" ? parsed.coverImage : "",
+    coverVideo:
+      typeof parsed.coverVideo === "string" ? parsed.coverVideo : "",
+    closingImage:
+      typeof parsed.closingImage === "string" ? parsed.closingImage : "",
+    closingVideo:
+      typeof parsed.closingVideo === "string" ? parsed.closingVideo : "",
+    bride: typeof parsed.bride === "string" ? parsed.bride : "",
+    groom: typeof parsed.groom === "string" ? parsed.groom : "",
+    gallery: Array.isArray(parsed.gallery)
+      ? parsed.gallery.filter(
+          (value): value is string =>
+            typeof value === "string" && value.trim().length > 0,
+        )
+      : [],
+    party: Array.isArray(parsed.party)
+      ? parsed.party.map((value) => (typeof value === "string" ? value : ""))
+      : [],
+    backdrops: mergeBackdrops(parsed.backdrops),
+  };
+}
+
+function mergeBackdrops(
+  raw: InviteMedia["backdrops"] | undefined,
+): InviteMedia["backdrops"] {
+  if (!raw || typeof raw !== "object") {
+    return {};
+  }
+  const next: InviteMedia["backdrops"] = {};
+  for (const section of INVITE_SECTIONS) {
+    const row = raw[section.id];
+    if (!row || typeof row !== "object") {
+      continue;
+    }
+    next[section.id] = {
+      image: typeof row.image === "string" ? row.image : "",
+      video: typeof row.video === "string" ? row.video : "",
+    };
+  }
+  return next;
 }
 
 function mergeCopy(raw: Partial<InviteCopy> | undefined): InviteCopy {

@@ -1,5 +1,4 @@
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { invitationMedia } from "@/data/media";
 import type { InviteCopy } from "@/lib/site-settings";
 
 export function ParentsSection({
@@ -8,7 +7,7 @@ export function ParentsSection({
   families: InviteCopy["families"];
 }) {
   return (
-    <InvitationSection image={invitationMedia.parents.background} mediaAlt="">
+    <InvitationSection section="parents" mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">
         {families.label}
       </p>

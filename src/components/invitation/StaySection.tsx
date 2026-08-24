@@ -1,10 +1,9 @@
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { invitationMedia } from "@/data/media";
 import type { InviteCopy } from "@/lib/site-settings";
 
 export function StaySection({ stay }: { stay: InviteCopy["stay"] }) {
   return (
-    <InvitationSection image={invitationMedia.stay.background} mediaAlt="">
+    <InvitationSection section="stay" mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">
         Stay & travel
       </p>

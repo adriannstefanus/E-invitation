@@ -2,9 +2,12 @@
 
 import type { ReactNode } from "react";
 import { MediaBackdrop } from "@/components/invitation/MediaBackdrop";
+import { useInviteVisuals } from "@/components/invitation/InviteVisualsContext";
+import type { InviteSectionId } from "@/lib/site-settings";
 
 type InvitationSectionProps = {
   children: ReactNode;
+  section?: InviteSectionId;
   image?: string;
   video?: string;
   mediaAlt?: string;
@@ -13,16 +16,20 @@ type InvitationSectionProps = {
 
 export function InvitationSection({
   children,
+  section,
   image,
   video,
   mediaAlt = "",
   priority = false,
 }: InvitationSectionProps) {
+  const visuals = useInviteVisuals();
+  const backdrop = section ? visuals?.backdrops[section] : undefined;
+
   return (
     <section className="relative flex h-dvh w-full shrink-0 snap-start snap-always flex-col items-center overflow-hidden">
       <MediaBackdrop
-        image={image}
-        video={video}
+        image={image ?? backdrop?.image}
+        video={video ?? backdrop?.video}
         alt={mediaAlt}
         priority={priority}
       />

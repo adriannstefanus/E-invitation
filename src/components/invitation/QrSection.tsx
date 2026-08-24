@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { invitationMedia } from "@/data/media";
 import { formatDoorCode } from "@/lib/door-code-format";
 
 type QrSectionProps = {
@@ -32,7 +31,7 @@ export function QrSection({ guestName, inviteUrl, doorCode }: QrSectionProps) {
   }, [inviteUrl]);
 
   return (
-    <InvitationSection image={invitationMedia.cover.image} mediaAlt="">
+    <InvitationSection section="qr" mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">
         Attendance
       </p>

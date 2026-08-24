@@ -1,6 +1,5 @@
 import { CopyButton } from "@/components/invitation/CopyButton";
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { invitationMedia } from "@/data/media";
 import type { InviteCopy } from "@/lib/site-settings";
 
 export function InstagramSection({
@@ -9,7 +8,7 @@ export function InstagramSection({
   instagram: InviteCopy["instagram"];
 }) {
   return (
-    <InvitationSection image={invitationMedia.instagram.background} mediaAlt="">
+    <InvitationSection section="instagram" mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">Share</p>
       <h2 className="font-display mt-4 text-3xl">{instagram.hashtag}</h2>
       <p className="mt-3 max-w-xs text-sm text-muted">

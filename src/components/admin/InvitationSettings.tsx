@@ -9,6 +9,7 @@ import {
   StatusBadge,
   fieldClass,
 } from "@/components/admin/InvitationChrome";
+import { InviteMediaGroup } from "@/components/admin/InvitationMedia";
 import {
   DangerGroup,
   GoLiveGroup,
@@ -77,7 +78,17 @@ const MODULES = [
       "Verse, parents, story, rundown, party",
       "Background music (MP3 or M4A)",
     ],
-    later: ["English / Indonesian", "Photo and video upload"],
+    later: ["English / Indonesian"],
+  },
+  {
+    href: "#media",
+    title: "Photos and video",
+    live: [
+      "Cover photo / video",
+      "Backdrop for each section",
+      "Bride and groom portraits",
+      "Gallery and wedding party",
+    ],
   },
   {
     href: "#go-live",
@@ -112,6 +123,7 @@ export function InvitationSettings({ settings }: { settings: SiteSettings }) {
       <GuideGroup settings={settings} />
       <GuestTypesForm settings={settings} />
       <InviteCopyGroup settings={settings} />
+      <InviteMediaGroup settings={settings} />
       <GoLiveGroup settings={settings} />
       <DangerGroup />
     </div>

@@ -1,5 +1,4 @@
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { invitationMedia } from "@/data/media";
 import {
   eventsForInvite,
   type InviteEventDetails,
@@ -15,7 +14,7 @@ export function LocationSection({
 }) {
   const visible = eventsForInvite(events, invitedTo);
   return (
-    <InvitationSection image={invitationMedia.location.background} mediaAlt="">
+    <InvitationSection section="location" mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">Location</p>
       <div className="mt-6 w-full space-y-3">
         {visible.map((event) => (

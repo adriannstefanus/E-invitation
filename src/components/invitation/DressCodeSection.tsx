@@ -1,5 +1,4 @@
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { invitationMedia } from "@/data/media";
 import type { SiteSettings } from "@/lib/site-settings";
 
 export function DressCodeSection({
@@ -8,7 +7,7 @@ export function DressCodeSection({
   dressCode: SiteSettings["dressCode"];
 }) {
   return (
-    <InvitationSection image={invitationMedia.dressCode.background} mediaAlt="">
+    <InvitationSection section="dressCode" mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">
         Dress code
       </p>

@@ -1,6 +1,5 @@
 import { InvitationSection } from "@/components/invitation/InvitationSection";
 import { PhotoSlot } from "@/components/invitation/PhotoSlot";
-import { invitationMedia } from "@/data/media";
 
 type Person = {
   role: string;
@@ -9,37 +8,41 @@ type Person = {
   parents: string;
 };
 
-export function BrideDetailSection({ person }: { person: Person }) {
+export function BrideDetailSection({
+  person,
+  photo,
+}: {
+  person: Person;
+  photo: string;
+}) {
   return (
-    <PersonDetailSection
-      person={person}
-      photo={invitationMedia.couple.bride}
-      background={invitationMedia.bride.background}
-    />
+    <PersonDetailSection person={person} photo={photo} section="bride" />
   );
 }
 
-export function GroomDetailSection({ person }: { person: Person }) {
+export function GroomDetailSection({
+  person,
+  photo,
+}: {
+  person: Person;
+  photo: string;
+}) {
   return (
-    <PersonDetailSection
-      person={person}
-      photo={invitationMedia.couple.groom}
-      background={invitationMedia.groom.background}
-    />
+    <PersonDetailSection person={person} photo={photo} section="groom" />
   );
 }
 
 function PersonDetailSection({
   person,
   photo,
-  background,
+  section,
 }: {
   person: Person;
   photo: string;
-  background: string;
+  section: "bride" | "groom";
 }) {
   return (
-    <InvitationSection image={background} mediaAlt="">
+    <InvitationSection section={section} mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">
         {person.role}
       </p>

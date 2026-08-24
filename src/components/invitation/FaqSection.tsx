@@ -1,10 +1,9 @@
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { invitationMedia } from "@/data/media";
 import type { FaqItem } from "@/lib/site-settings";
 
 export function FaqSection({ faq }: { faq: FaqItem[] }) {
   return (
-    <InvitationSection image={invitationMedia.faq.background} mediaAlt="">
+    <InvitationSection section="faq" mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">FAQ</p>
       <div className="mt-6 w-full space-y-2">
         {faq.map((item) => (

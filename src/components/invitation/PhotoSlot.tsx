@@ -12,6 +12,14 @@ type PhotoSlotProps = {
 export function PhotoSlot({ src, alt, className = "" }: PhotoSlotProps) {
   const [ready, setReady] = useState(false);
 
+  if (!src) {
+    return (
+      <div
+        className={`relative overflow-hidden border border-line bg-card ${className}`}
+      />
+    );
+  }
+
   return (
     <div
       className={`relative overflow-hidden border border-line bg-card ${className}`}

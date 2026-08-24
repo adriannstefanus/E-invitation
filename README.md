@@ -29,7 +29,7 @@ Staff: [http://localhost:3000/admin](http://localhost:3000/admin)
 
 Add guests (and type: regular / vip / family / vendor), then open each guest to copy `/g/...` and the QR. Guests show that QR at the door; staff scan it on **Door**.
 
-For background music, run [`supabase/migrate-invite-media.sql`](supabase/migrate-invite-media.sql) once, then upload an MP3 or M4A on **Invitation**.
+For background music, cover and section backdrops, portraits, and the gallery, run [`supabase/migrate-invite-media.sql`](supabase/migrate-invite-media.sql) once, then upload from **Invitation**. Photos: JPEG / PNG / WebP up to 2 MB. Videos: MP4 up to 8 MB. Empty slots fall back to files in [`public/media`](public/media).
 
 `?to=Andi` still works for a nameless preview without a token.
 

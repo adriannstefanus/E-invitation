@@ -5,7 +5,6 @@ import { submitComment } from "@/app/invite/actions";
 import { InvitationSection } from "@/components/invitation/InvitationSection";
 import { useInviteBusy } from "@/components/invitation/InviteBusy";
 import { useToast } from "@/components/ui/Toast";
-import { invitationMedia } from "@/data/media";
 
 type GuestComment = {
   id: string;
@@ -68,7 +67,7 @@ export function CommentsSection({
   }
 
   return (
-    <InvitationSection image={invitationMedia.comments.background} mediaAlt="">
+    <InvitationSection section="comments" mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">
         Guest book
       </p>

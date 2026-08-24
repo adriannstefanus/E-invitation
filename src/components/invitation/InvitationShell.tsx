@@ -13,6 +13,7 @@ import { GallerySection } from "@/components/invitation/GallerySection";
 import { GiftSection } from "@/components/invitation/GiftSection";
 import { InstagramSection } from "@/components/invitation/InstagramSection";
 import { InviteBusyProvider } from "@/components/invitation/InviteBusy";
+import { InviteVisualsProvider } from "@/components/invitation/InviteVisualsContext";
 import { LiveStreamSection } from "@/components/invitation/LiveStreamSection";
 import { LocationSection } from "@/components/invitation/LocationSection";
 import { LoveStorySection } from "@/components/invitation/LoveStorySection";
@@ -32,6 +33,7 @@ import { StaySection } from "@/components/invitation/StaySection";
 import { VerseSection } from "@/components/invitation/VerseSection";
 import { WeddingPartySection } from "@/components/invitation/WeddingPartySection";
 import type { GuestbookComment, InviteEvent, RsvpStatus } from "@/lib/types";
+import { inviteVisuals } from "@/lib/invite-visuals";
 import {
   inviteThemeStyle,
   isSectionVisible,
@@ -67,6 +69,7 @@ export function InvitationShell({
   const musicRef = useRef<MusicToggleHandle>(null);
   const couple = settings.couple;
   const copy = settings.copy;
+  const visuals = inviteVisuals(settings);
 
   function renderSection(id: InviteSectionId): ReactNode {
     if (!isSectionVisible(settings, id)) {
@@ -87,6 +90,8 @@ export function InvitationShell({
           <CoupleSection
             brideName={couple.brideName}
             groomName={couple.groomName}
+            bridePhoto={visuals.bride}
+            groomPhoto={visuals.groom}
           />
         );
       case "verse":
@@ -104,6 +109,7 @@ export function InvitationShell({
               fullName: couple.brideFullName,
               parents: couple.brideParents,
             }}
+            photo={visuals.bride}
           />
         );
       case "groom":
@@ -115,12 +121,18 @@ export function InvitationShell({
               fullName: couple.groomFullName,
               parents: couple.groomParents,
             }}
+            photo={visuals.groom}
           />
         );
       case "loveStory":
         return <LoveStorySection beats={copy.loveStory} />;
       case "weddingParty":
-        return <WeddingPartySection party={copy.weddingParty} />;
+        return (
+          <WeddingPartySection
+            party={copy.weddingParty}
+            portraits={visuals.party}
+          />
+        );
       case "events":
         return <EventsSection invitedTo={invitedTo} events={settings.events} />;
       case "location":
@@ -149,7 +161,7 @@ export function InvitationShell({
           />
         );
       case "gallery":
-        return <GallerySection />;
+        return <GallerySection photos={visuals.gallery} />;
       case "gifts":
         return <GiftSection accounts={settings.bankAccounts} />;
       case "faq":
@@ -186,32 +198,36 @@ export function InvitationShell({
         }`}
       >
         <InviteBusyProvider>
-          <Cover
-            guestName={guestName}
-            brideName={couple.brideName}
-            groomName={couple.groomName}
-            weddingAt={couple.weddingAt}
-            greeting={copy.coverGreeting}
-            opened={opened}
-            onOpen={() => {
-              setOpened(true);
-              musicRef.current?.start();
-            }}
-          />
-
-          {settings.musicUrl ? (
-            <MusicToggle
-              ref={musicRef}
-              src={settings.musicUrl}
-              visible={opened}
+          <InviteVisualsProvider visuals={visuals}>
+            <Cover
+              guestName={guestName}
+              brideName={couple.brideName}
+              groomName={couple.groomName}
+              weddingAt={couple.weddingAt}
+              greeting={copy.coverGreeting}
+              opened={opened}
+              image={visuals.coverImage}
+              video={visuals.coverVideo}
+              onOpen={() => {
+                setOpened(true);
+                musicRef.current?.start();
+              }}
             />
-          ) : null}
 
-          {opened
-            ? orderedInviteSections(settings).map((id) => (
-                <Fragment key={id}>{renderSection(id)}</Fragment>
-              ))
-            : null}
+            {settings.musicUrl ? (
+              <MusicToggle
+                ref={musicRef}
+                src={settings.musicUrl}
+                visible={opened}
+              />
+            ) : null}
+
+            {opened
+              ? orderedInviteSections(settings).map((id) => (
+                  <Fragment key={id}>{renderSection(id)}</Fragment>
+                ))
+              : null}
+          </InviteVisualsProvider>
         </InviteBusyProvider>
       </div>
     </div>

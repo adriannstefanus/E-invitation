@@ -1,5 +1,4 @@
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { invitationMedia } from "@/data/media";
 import {
   eventsForInvite,
   formatEventWhen,
@@ -16,7 +15,7 @@ export function EventsSection({
 }) {
   const visible = eventsForInvite(events, invitedTo);
   return (
-    <InvitationSection image={invitationMedia.events.background} mediaAlt="">
+    <InvitationSection section="events" mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">
         Event details
       </p>

@@ -14,6 +14,7 @@ import {
   mergeSectionOrder,
   combineDateTime,
   dropMatchingPresetColors,
+  isInviteSectionId,
   isThemeId,
   mergeSiteSettings,
   sanitizeThemeColors,
@@ -25,10 +26,22 @@ import { createGuestToken, parseInviteToken } from "@/lib/guest-token";
 import {
   INVITE_MEDIA_BUCKET,
   INVITE_MUSIC_MAX_BYTES,
+  INVITE_IMAGE_MAX_BYTES,
+  INVITE_VIDEO_MAX_BYTES,
+  INVITE_GALLERY_MAX,
   classifyInviteMusic,
+  classifyInviteImage,
+  classifyInviteVideo,
   inviteMusicContentType,
   inviteMusicObjectPath,
+  inviteVisualContentType,
+  inviteVisualObjectPath,
+  inviteVisualSiblingPaths,
+  isInviteVisualSlot,
+  isVisualImageSlot,
+  objectPathFromPublicUrl,
   otherInviteMusicExt,
+  type InviteVisualSlot,
 } from "@/lib/invite-media";
 import { createServiceClient } from "@/lib/supabase";
 import {
@@ -617,6 +630,20 @@ export async function saveInvitationSettings(formData: FormData) {
           ...(payload as Partial<SiteSettings["copy"]>),
         },
       });
+    } else if (section === "mediaGallery") {
+      const payload = parseJsonPayload(formData.get("payload"));
+      const requested = Array.isArray(payload) ? payload.map(String) : [];
+      const allowed = new Set(next.media.gallery);
+      const ordered = requested.filter((url) => allowed.has(url));
+      for (const url of next.media.gallery) {
+        if (!ordered.includes(url)) {
+          ordered.push(url);
+        }
+      }
+      next = {
+        ...next,
+        media: { ...next.media, gallery: ordered },
+      };
     } else if (section === "goLive") {
       next = {
         ...next,
@@ -712,6 +739,285 @@ export async function clearInviteMusic() {
 
   revalidateInvite();
   redirect("/admin/invitation?saved=music-cleared");
+}
+
+export async function prepareInviteVisualUpload(formData: FormData) {
+  const slot = String(formData.get("slot") ?? "");
+  if (!isInviteVisualSlot(slot)) {
+    return { ok: false as const, error: "media-type" as const };
+  }
+
+  const index = Number(formData.get("index") ?? -1);
+  const sectionId = String(formData.get("sectionId") ?? "");
+  const fileName = String(formData.get("fileName") ?? "");
+  const fileType = String(formData.get("fileType") ?? "");
+  const fileSize = Number(formData.get("fileSize") ?? 0);
+  const header = bytesFromBase64(String(formData.get("header") ?? ""));
+
+  const image = isVisualImageSlot(slot);
+  const maxBytes = image ? INVITE_IMAGE_MAX_BYTES : INVITE_VIDEO_MAX_BYTES;
+  if (!fileSize || fileSize > maxBytes) {
+    return { ok: false as const, error: "media-size" as const };
+  }
+
+  const current = await getSiteSettings();
+  if (slot === "gallery" && current.media.gallery.length >= INVITE_GALLERY_MAX) {
+    return { ok: false as const, error: "media-gallery-full" as const };
+  }
+  if (slot === "party" && (index < 0 || index >= current.copy.weddingParty.length)) {
+    return { ok: false as const, error: "media-type" as const };
+  }
+  if (
+    (slot === "backdropImage" || slot === "backdropVideo") &&
+    (!isInviteSectionId(sectionId) || sectionId === "qr")
+  ) {
+    return { ok: false as const, error: "media-type" as const };
+  }
+
+  const ext = image
+    ? classifyInviteImage({ name: fileName, type: fileType, header })
+    : classifyInviteVideo({ name: fileName, type: fileType, header });
+  if (!ext) {
+    return { ok: false as const, error: "media-type" as const };
+  }
+
+  const path = inviteVisualObjectPath(slot, ext, {
+    index: slot === "party" ? index : undefined,
+    id: slot === "gallery" ? crypto.randomUUID() : undefined,
+    section:
+      slot === "backdropImage" || slot === "backdropVideo"
+        ? sectionId
+        : undefined,
+  });
+  const contentType = inviteVisualContentType(ext);
+
+  try {
+    const storage = createServiceClient().storage.from(INVITE_MEDIA_BUCKET);
+    const { data, error } = await storage.createSignedUploadUrl(path, {
+      upsert: slot !== "gallery",
+    });
+    if (error || !data?.signedUrl) {
+      return {
+        ok: false as const,
+        error: mediaStorageError(error?.message ?? ""),
+      };
+    }
+    return {
+      ok: true as const,
+      path: data.path ?? path,
+      signedUrl: data.signedUrl,
+      token: data.token ?? "",
+      contentType,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    return { ok: false as const, error: mediaStorageError(message) };
+  }
+}
+
+export async function commitInviteVisual(formData: FormData) {
+  const slotValue = String(formData.get("slot") ?? "");
+  const path = String(formData.get("path") ?? "").replace(/^\/+/, "");
+  const index = Number(formData.get("index") ?? -1);
+  if (!isInviteVisualSlot(slotValue)) {
+    redirect("/admin/invitation?error=media-type");
+  }
+  const slot = slotValue;
+  const sectionId = String(formData.get("sectionId") ?? "");
+  if (
+    !/^(cover|closing|people|party|gallery|sections)\//.test(path)
+  ) {
+    redirect("/admin/invitation?error=media-type");
+  }
+  if (
+    (slot === "backdropImage" || slot === "backdropVideo") &&
+    (!isInviteSectionId(sectionId) ||
+      sectionId === "qr" ||
+      !path.startsWith(`sections/${sectionId}/`))
+  ) {
+    redirect("/admin/invitation?error=media-type");
+  }
+
+  const storage = createServiceClient().storage.from(INVITE_MEDIA_BUCKET);
+  const { data } = storage.getPublicUrl(path);
+  const url = `${data.publicUrl}?v=${Date.now()}`;
+  const current = await getSiteSettings();
+
+  if (slot === "party" && (index < 0 || index >= current.copy.weddingParty.length)) {
+    redirect("/admin/invitation?error=media-type");
+  }
+
+  const stale = inviteVisualSiblingPaths(slot, {
+    index,
+    section: isInviteSectionId(sectionId) ? sectionId : undefined,
+  }).filter((item) => item !== path);
+  if (stale.length > 0) {
+    await storage.remove(stale);
+  }
+
+  try {
+    await saveSiteSettings(
+      applyVisualUrl(
+        current,
+        slot,
+        url,
+        index,
+        isInviteSectionId(sectionId) ? sectionId : "",
+      ),
+    );
+  } catch (error) {
+    if (isNextRedirect(error)) {
+      throw error;
+    }
+    redirect("/admin/invitation?error=settings");
+  }
+
+  revalidateInvite();
+  redirect("/admin/invitation?saved=media");
+}
+
+export async function clearInviteVisual(formData: FormData) {
+  const slotValue = String(formData.get("slot") ?? "");
+  const index = Number(formData.get("index") ?? -1);
+  if (!isInviteVisualSlot(slotValue)) {
+    redirect("/admin/invitation?error=media-type");
+  }
+  const slot = slotValue;
+
+  const current = await getSiteSettings();
+  const url = String(formData.get("url") ?? "");
+  const sectionId = String(formData.get("sectionId") ?? "");
+  const { next, removed } = clearVisualUrl(
+    current,
+    slot,
+    index,
+    url,
+    isInviteSectionId(sectionId) ? sectionId : "",
+  );
+  const paths = removed
+    .map(objectPathFromPublicUrl)
+    .filter((value): value is string => Boolean(value));
+  if (paths.length > 0) {
+    await createServiceClient().storage.from(INVITE_MEDIA_BUCKET).remove(paths);
+  }
+
+  try {
+    await saveSiteSettings(next);
+  } catch (error) {
+    if (isNextRedirect(error)) {
+      throw error;
+    }
+    redirect("/admin/invitation?error=settings");
+  }
+
+  revalidateInvite();
+  redirect("/admin/invitation?saved=media-cleared");
+}
+
+function applyVisualUrl(
+  settings: SiteSettings,
+  slot: InviteVisualSlot,
+  url: string,
+  index: number,
+  sectionId: InviteSectionId | "",
+): SiteSettings {
+  const media = { ...settings.media };
+  if (slot === "gallery") {
+    media.gallery = [...media.gallery, url].slice(0, INVITE_GALLERY_MAX);
+  } else if (slot === "party") {
+    const party = [...media.party];
+    while (party.length <= index) {
+      party.push("");
+    }
+    party[index] = url;
+    media.party = party;
+  } else if (slot === "backdropImage" || slot === "backdropVideo") {
+    if (!sectionId) {
+      return settings;
+    }
+    const current = media.backdrops[sectionId] ?? { image: "", video: "" };
+    media.backdrops = {
+      ...media.backdrops,
+      [sectionId]: {
+        ...current,
+        [slot === "backdropImage" ? "image" : "video"]: url,
+      },
+    };
+    if (sectionId === "closing") {
+      if (slot === "backdropImage") {
+        media.closingImage = url;
+      } else {
+        media.closingVideo = url;
+      }
+    }
+  } else {
+    media[slot] = url;
+  }
+  return { ...settings, media };
+}
+
+function clearVisualUrl(
+  settings: SiteSettings,
+  slot: InviteVisualSlot,
+  index: number,
+  url = "",
+  sectionId: InviteSectionId | "" = "",
+) {
+  const media = { ...settings.media };
+  const removed: string[] = [];
+  if (slot === "gallery") {
+    const found = url ? media.gallery.indexOf(url) : index;
+    if (found >= 0 && found < media.gallery.length) {
+      removed.push(media.gallery[found]);
+      media.gallery = media.gallery.filter((_, item) => item !== found);
+    }
+  } else if (slot === "party") {
+    const party = [...media.party];
+    if (index >= 0) {
+      if (party[index]) {
+        removed.push(party[index]);
+      }
+      party[index] = "";
+      media.party = party;
+    }
+  } else if (slot === "backdropImage" || slot === "backdropVideo") {
+    if (sectionId) {
+      const current = media.backdrops[sectionId] ?? { image: "", video: "" };
+      const key = slot === "backdropImage" ? "image" : "video";
+      if (current[key]) {
+        removed.push(current[key]);
+      }
+      media.backdrops = {
+        ...media.backdrops,
+        [sectionId]: { ...current, [key]: "" },
+      };
+      if (sectionId === "closing") {
+        const legacy = slot === "backdropImage" ? "closingImage" : "closingVideo";
+        if (media[legacy] && media[legacy] !== current[key]) {
+          removed.push(media[legacy]);
+        }
+        media[legacy] = "";
+      }
+    }
+  } else if (media[slot]) {
+    removed.push(media[slot]);
+    media[slot] = "";
+  }
+  return { next: { ...settings, media }, removed };
+}
+
+function bytesFromBase64(value: string) {
+  if (!value) {
+    return new Uint8Array();
+  }
+  return new Uint8Array(Buffer.from(value, "base64"));
+}
+
+function mediaStorageError(message: string) {
+  if (/bucket/i.test(message) || /not found/i.test(message)) {
+    return "media-storage" as const;
+  }
+  return "media" as const;
 }
 
 function revalidateInvite() {

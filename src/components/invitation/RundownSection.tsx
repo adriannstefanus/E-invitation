@@ -1,10 +1,9 @@
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { invitationMedia } from "@/data/media";
 import type { InviteCopy } from "@/lib/site-settings";
 
 export function RundownSection({ items }: { items: InviteCopy["rundown"] }) {
   return (
-    <InvitationSection image={invitationMedia.rundown.background} mediaAlt="">
+    <InvitationSection section="rundown" mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">
         Day rundown
       </p>

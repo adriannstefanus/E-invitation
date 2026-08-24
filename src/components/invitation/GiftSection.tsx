@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import { InvitationSection } from "@/components/invitation/InvitationSection";
-import { invitationMedia } from "@/data/media";
 import type { BankAccount } from "@/lib/site-settings";
 
 export function GiftSection({ accounts }: { accounts: BankAccount[] }) {
   return (
-    <InvitationSection image={invitationMedia.gift.background} mediaAlt="">
+    <InvitationSection section="gifts" mediaAlt="">
       <p className="text-xs tracking-[0.3em] text-muted uppercase">
         Wedding gift
       </p>

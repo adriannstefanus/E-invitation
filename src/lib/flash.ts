@@ -84,6 +84,39 @@ export function flashFromSearchParams(
     return { tone: "error", message: "Could not update invite music. Try again." };
   }
 
+  if (params.get("error") === "media-type") {
+    return {
+      tone: "error",
+      message: "Use a JPEG, PNG, or WebP photo, or an MP4 video.",
+    };
+  }
+
+  if (params.get("error") === "media-size") {
+    return {
+      tone: "error",
+      message: "Keep photos under 2 MB and videos under 8 MB.",
+    };
+  }
+
+  if (params.get("error") === "media-storage") {
+    return {
+      tone: "error",
+      message:
+        "Could not store the file. Run supabase/migrate-invite-media.sql.",
+    };
+  }
+
+  if (params.get("error") === "media-gallery-full") {
+    return {
+      tone: "error",
+      message: "Gallery is full. Remove a photo first.",
+    };
+  }
+
+  if (params.get("error") === "media") {
+    return { tone: "error", message: "Could not update invite media. Try again." };
+  }
+
   if (params.get("error") === "reset") {
     return { tone: "error", message: "Could not reset that data. Try again." };
   }
@@ -112,6 +145,14 @@ export function flashFromSearchParams(
 
   if (params.get("saved") === "music-cleared") {
     return { tone: "warning", message: "Background music removed." };
+  }
+
+  if (params.get("saved") === "media") {
+    return { tone: "success", message: "Invite photo or video saved." };
+  }
+
+  if (params.get("saved") === "media-cleared") {
+    return { tone: "warning", message: "Invite photo or video removed." };
   }
 
   if (params.get("saved") === "sent") {

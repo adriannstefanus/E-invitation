@@ -39,10 +39,7 @@ export function InviteCopyGroup({ settings }: { settings: SiteSettings }) {
       </div>
       <div className="mt-8">
         <LaterItems
-          items={[
-            "English / Indonesian for the whole invite",
-            "Photo and video upload",
-          ]}
+          items={["English / Indonesian for the whole invite"]}
         />
       </div>
     </Group>
